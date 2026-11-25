@@ -17,6 +17,7 @@ import type { SerpResult } from '../src/types'
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../../..')
 const MATRIX_JSON = resolve(ROOT, 'packages/core/src/templates/operator-matrix.json')
 const MATRIX_MD = resolve(ROOT, 'docs/Operator-Matrix.md')
+const SAMPLES_JSON = resolve(ROOT, 'packages/serp/.spike/last-run.json')
 
 /** Neutral, heavily indexed public site with plenty of PDFs. */
 const D = 'nasa.gov'
@@ -181,6 +182,8 @@ const main = async () => {
   }
 
   const cells: Cell[] = []
+  /** Raw results per query, for diagnosing verdicts. Git-ignored. */
+  const samples: Array<{ engine: Engine; query: string; results: SerpResult[] }> = []
   for (const { engine, provider, probe, v } of plan) {
     const req: SearchRequest = { q: v.q, engine, type: 'web', num: 20, page: 1, ...probe.overrides }
     const base = {
@@ -193,6 +196,7 @@ const main = async () => {
     try {
       const res = await provider.search(req, AbortSignal.timeout(30_000))
       const { verdict, matched } = verdictFor(probe, res.results)
+      samples.push({ engine, query: v.q, results: res.results })
       cells.push({
         ...base,
         verdict,
@@ -211,6 +215,8 @@ const main = async () => {
   const generatedAt = new Date().toISOString()
   mkdirSync(dirname(MATRIX_JSON), { recursive: true })
   writeFileSync(MATRIX_JSON, `${JSON.stringify({ generatedAt, probeDomain: D, cells }, null, 2)}\n`)
+  mkdirSync(dirname(SAMPLES_JSON), { recursive: true })
+  writeFileSync(SAMPLES_JSON, `${JSON.stringify(samples, null, 2)}\n`)
 
   const cols = engines.map((e) => e.engine)
   const rows = [...new Set(cells.map((c) => `${c.operator}|${c.syntax}`))]

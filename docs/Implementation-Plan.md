@@ -59,7 +59,7 @@ Keeping all decision logic in `packages/core` (no network, no DB) is the main de
 
 ## Phase 2 — SERP provider spike (T-001, 1 day)
 
-> 🟡 Adapters + spike script done on `feat/t-001-serp-providers`. Live run waits for a SERP API key. Provider decision will be D-015.
+> ✅ Done 2026-11-25 on `feat/t-001-serp-providers`: SerpAPI/Google for v1, Bing off, results re-checked in code, pages of 10 (D-015 – D-017). Serper/Brave re-test is T-001b.
 
 Goal: pick the default provider with evidence, not guesses.
 

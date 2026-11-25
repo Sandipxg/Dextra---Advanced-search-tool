@@ -31,6 +31,27 @@
   - **Serper** — Google only: `gl`, `hl`, `location`, `tbs` (`qdr:*`, `cdr`), `num`, `page`; endpoints `/search`, `/news`, `/scholar`.
   - **SerpAPI** — Google: `gl`, `hl`, `location`, `tbs`, `num`, `start`, news via `tbm=nws`; Scholar: `hl`, years only (`as_ylo`/`as_yhi`), `num` ≤ 20; Bing: `cc`, `count`, `first` (no language/location/time mapping in v1).
   - **Brave** — `country`, `search_lang`, `count` ≤ 20, `offset` ≤ 9, `freshness` (`pd/pw/pm/py` or `YYYY-MM-DDtoYYYY-MM-DD`); no city-level location.
-- Whether Google still honours `num` > 10 is checked by the `num=20` probe in the operator matrix.
+- `num` > 10 is ignored by both Google and Bing (probe returned 6 and 10): fetch in pages of 10 (D-017).
+
+## Operator matrix — reviewed 2026-11-25
+
+Run with a SerpAPI key only, probe domain `nasa.gov`, one query per operator. Raw verdicts are in [Operator Matrix](./Operator-Matrix.md); this table corrects them after reading the returned URLs.
+
+| Operator              | Google (SerpAPI) | Bing (SerpAPI) | Notes                                                                |
+| --------------------- | ---------------- | -------------- | -------------------------------------------------------------------- |
+| `site:`               | ✅               | ❌             | Bing returned wikipedia.org, mars.com                                |
+| `-site:`              | ✅               | ✅             |                                                                      |
+| `site:*.`             | ❌ drops scope   | ❌             | Use `site:d -site:www.d`                                             |
+| `filetype:`           | ✅               | ❌             | Raw 6/9: the misses were PDFs served without `.pdf`                  |
+| `ext:`                | ❌ drops scope   | ❌             | Use `filetype:`                                                      |
+| `(a OR b)`            | ✅               | ❌             | Bing returned the unfiltered query                                   |
+| `intitle:`            | ✅               | n/a            | Bing "supported" only because the term was common                    |
+| `inurl:`              | ⚠️ loose         | n/a            | Once dropped `site:` entirely; once kept scope with 6/10 URL matches |
+| `intext:` / `inbody:` | ❌               | ❌             | Google read `intext` as a word ("Intex" pool covers)                 |
+| `"phrase"`            | ✅               | ❌             | Bing matched only "sample"                                           |
+| `-term`               | ✅               | n/a            |                                                                      |
+
+Confidence: one probe domain, one query per cell. Re-run with Serper/Brave keys (T-001b) and spot-check a second domain before relying on edge cases.
+
 - Brave supports fewer operators.
 - Test each operator once per engine before relying on it in templates.

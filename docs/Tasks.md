@@ -4,21 +4,22 @@ _Last updated: 2026-11-25_
 
 ## 🟡 In progress
 
-- [ ] T-001 SERP provider spike — adapters for Serper, SerpAPI (Google + Bing) and Brave done in `@dextra/serp`; operator-matrix script ready. **Blocked on a SERP API key** for the live run (`pnpm --filter @dextra/serp spike --yes`).
+_None_
 
 ## 🔜 Up next
 
+- [ ] T-001b Re-run the operator matrix with Serper and Brave keys; decide whether to enable them (D-015)
 - [ ] T-003 Write the intake spec Zod schema from [Intake Form Spec](./Intake-Form-Spec.md)
 - [ ] T-004b Seed script: parse YAML blocks in Template-Library.md into the `templates` table + Zod `TemplateSchema`
 - [ ] T-005 Template selector: LLM tool call with enum template IDs + Zod-validated output
-- [ ] T-006 Guardrails: scope check, per-engine operator check, budget cap, authorization gate
+- [ ] T-006 Guardrails: scope check, per-engine operator check, budget cap, authorization gate — plus result re-check against scope/signal (D-016)
 
 ## 🧊 Backlog
 
 - [ ] T-007 Intake form UI: basic mode (8 fields) + advanced toggle
 - [ ] T-008 Cached SERP API locations list for the city dropdown
 - [ ] T-009 Runner with Soft-fallback batches and "Outside scope" group
-- [ ] T-010 Dedupe and scoring; pre-run summary with cost estimate
+- [ ] T-010 Dedupe and scoring; pre-run summary with cost estimate — cost counts pages of 10 (D-017)
 - [ ] T-011 Feedback loop: useful-hit rate per template and engine
 - [ ] T-012 Decide fixed ~20% outside-scope budget vs only-on-shortfall (open in D-003)
 
@@ -28,6 +29,7 @@ _None_
 
 ## ✅ Done (recent)
 
+- [x] T-001 SERP provider spike: adapters + operator matrix; SerpAPI/Google for v1, Bing off, results re-checked in code, pages of 10 (D-015 – D-017) (2026-11-25)
 - [x] T-002 App stack chosen (D-014) (2026-11-25)
 - [x] Phase 1 bootstrap: monorepo, strict TS, Biome, Vitest, Turbo, Lefthook, CI, `@dextra/core`, `@dextra/env` (2026-11-25)
 - [x] T-004 Template library v1.0: 36 templates, 9 goals, decisions D-007–D-013 (2026-11-25) — engine lists to verify in T-001

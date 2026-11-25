@@ -1,5 +1,30 @@
 # Decisions
 
+## D-017 — Fetch results in pages of 10
+
+- **Date:** 2026-11-25
+- **Status:** Accepted
+- **Context:** The `num=20` probe returned 6 results on Google and 10 on Bing: both ignore larger page sizes.
+- **Decision:** Every provider call asks for at most 10 results. F2 (10 / 20 / 50 / 100) means 1 / 2 / 5 / 10 pages per query, and the runner stops paging when a page comes back short. Cost estimates count pages, not queries.
+- **Consequences:** F2 default 20 = 2 requests per query; Thorough (~80 queries) at 20 results is about 160 requests. The pre-run summary must show this.
+
+## D-016 — Code re-checks every result (operators are hints)
+
+- **Date:** 2026-11-25
+- **Status:** Accepted
+- **Context:** In T-001, Google sometimes dropped `site:` entirely (`site:nasa.gov inurl:artemis` returned wired.com and YouTube), and `intext:` was spell-corrected into "Intex" products. Scope enforced only in the query string is not enough.
+- **Decision:** After every SERP call, code checks each result URL against the scope list. Hard scope: off-scope results are discarded. Soft scope: they go to the "Outside scope" group labelled "engine ignored your filter". Where the signal is checkable from the URL or title (`filetype:` → extension or PDF-like path, `inurl:` → term in URL, `intitle:` → term in title), non-matching results are down-ranked, not dropped. Per-template "scope held" rates feed the T-011 hit-rate loop.
+- **Consequences:** Extends T-006 (guardrails) and T-010 (scorer). A query whose results are mostly off-scope is flagged in the report.
+
+## D-015 — SERP provider for v1: SerpAPI for Google; Bing off
+
+- **Date:** 2026-11-25
+- **Status:** Accepted (revisit when Serper/Brave keys are available)
+- **Context:** T-001 operator matrix ([Operator Matrix](./Operator-Matrix.md)), run with a SerpAPI key only. Google via SerpAPI honoured `site:`, `-site:`, `filetype:`, `OR`, `intitle:`, quotes and `-term`. Bing via SerpAPI returned near-identical generic "mars" results for every probe: it ignored `site:`, `filetype:` and quoted phrases.
+- **Decision:** v1 runs Google through SerpAPI. Bing is disabled for template queries (adapter kept, engine lists set to `[google]`). Serper and Brave adapters stay but are untested; re-run the spike with their keys before enabling them (T-001b).
+- **Consequences:** One engine in v1, so the engine router (D-004) has a single choice until T-001b. Swapping providers stays a config change behind `SerpProvider`.
+- **Alternatives considered:** Keep Bing for broader coverage — rejected, its results would bypass scope entirely.
+
 ## D-014 — App stack
 
 - **Date:** 2026-11-25

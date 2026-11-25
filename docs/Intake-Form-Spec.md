@@ -136,15 +136,15 @@ If E1 includes Bing or Brave, the operator check from the template library runs 
 
 The last section sets the query budget, the fallback behaviour and the output.
 
-| ID  | Question                                     | Input                              | Options / default                                              | Used for                                 |
-| --- | -------------------------------------------- | ---------------------------------- | -------------------------------------------------------------- | ---------------------------------------- |
-| F1  | How deep should we search?                   | Single select                      | Quick (~10 queries) · Standard (~30, default) · Thorough (~80) | Query budget, template count             |
-| F2  | Results to fetch per query                   | Single select                      | 10 · 20 (default) · 50 · 100                                   | API `num`, cost estimate                 |
-| F3  | Minimum useful results before widening       | Number                             | 15                                                             | Trigger for Soft fallback                |
-| F4  | Also show related results outside my filters | Switch                             | Off (default)                                                  | Extra ~20% budget, "Outside scope" group |
-| F5  | Output format                                | Multi-select                       | Ranked list (default) · Grouped by goal · CSV · JSON           | Report builder                           |
-| F6  | Authorization                                | Checkbox + program/engagement link | Shown and required when A4 is Bug bounty or Authorized pentest | Run gate, audit log                      |
-| F7  | Anything else the tool should know?          | Text                               | none                                                           | LLM context                              |
+| ID  | Question                                     | Input                              | Options / default                                              | Used for                                                           |
+| --- | -------------------------------------------- | ---------------------------------- | -------------------------------------------------------------- | ------------------------------------------------------------------ |
+| F1  | How deep should we search?                   | Single select                      | Quick (~10 queries) · Standard (~30, default) · Thorough (~80) | Query budget, template count                                       |
+| F2  | Results to fetch per query                   | Single select                      | 10 · 20 (default) · 50 · 100                                   | Pages of 10 results ([D-017](./Decisions.md#d-017)), cost estimate |
+| F3  | Minimum useful results before widening       | Number                             | 15                                                             | Trigger for Soft fallback                                          |
+| F4  | Also show related results outside my filters | Switch                             | Off (default)                                                  | Extra ~20% budget, "Outside scope" group                           |
+| F5  | Output format                                | Multi-select                       | Ranked list (default) · Grouped by goal · CSV · JSON           | Report builder                                                     |
+| F6  | Authorization                                | Checkbox + program/engagement link | Shown and required when A4 is Bug bounty or Authorized pentest | Run gate, audit log                                                |
+| F7  | Anything else the tool should know?          | Text                               | none                                                           | LLM context                                                        |
 
 Before running, the form shows a summary: chosen templates, estimated query count and API cost, and which filters are Hard, Soft or Open. The user confirms or edits from there.
 

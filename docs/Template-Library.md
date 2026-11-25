@@ -1,6 +1,6 @@
 # Dork Template Library
 
-_Status: **v1.0 — content approved** (engine lists still provisional until T-001) · Last updated: 2026-11-25 · Task: T-004 · Decisions: [D-007 – D-013](./Decisions.md)_
+_Status: **v1.1 — content approved, engines verified for Google** (Bing/Brave pending, see [D-015](./Decisions.md#d-015)) · Last updated: 2026-11-25 · Task: T-004 · Decisions: [D-007 – D-013, D-015 – D-017](./Decisions.md)_
 
 The LLM never writes a dork. It picks template `id`s from this file and picks values for each template's **params** from the listed enums. Code fills the **vars** from the intake spec, adds the scope/exclusion/keyword layers, translates operators per engine, and runs the guardrails. Later a seed script parses the YAML blocks below into the `templates` table.
 
@@ -37,7 +37,11 @@ The LLM never fills `{domain}`, `{name}` or `{keywords}`; they always come from 
 
 ### Canonical dialect
 
-Queries are written in **Google dialect**. The compiler translates per engine using the operator matrix from T-001 (e.g. Bing `intext:` → `inbody:`). If an operator has no translation, the template is dropped for that engine. Engine lists below are **provisional until T-001 verifies them**.
+Queries are written in **Google dialect**. The compiler translates per engine using the [operator matrix](./Operator-Matrix.md). If an operator has no translation, the template is dropped for that engine. Since T-001, every template lists `[google]` only: Bing via SerpAPI ignored `site:`, `filetype:` and quotes, and Serper/Brave are untested ([D-015](./Decisions.md#d-015)).
+
+**Operators allowed in templates (Google, verified 2026-11-25):** `site:`, `-site:`, `filetype:`, `(a OR b)`, `intitle:`, `"phrase"`, `-term`, and `inurl:` (loose, see below). **Not allowed:** `ext:` and `site:*.` (Google drops the scope), `intext:` / `inbody:` (treated as plain words). Use a quoted phrase instead of `intext:`.
+
+**Operators are hints, not guarantees.** Google sometimes relaxes a query and drops `site:` (seen with `inurl:`). Code re-checks every result against scope and, where possible, the template's signal ([D-016](./Decisions.md#d-016)).
 
 ### Record fields
 
@@ -53,7 +57,7 @@ Queries are written in **Google dialect**. The compiler translates per engine us
 | `regional`    | map: value → ISO country codes                                   | Optional. Listed enum values are offered to the LLM only when C1 is one of those countries ([D-011](./Decisions.md#d-011))                                                                              |
 | `vars`        | list                                                             | Code-filled vars used in `query`                                                                                                                                                                        |
 | `scope_mode`  | `required` \| `optional` \| `subdomains` \| `none` \| `platform` | How the compiler adds `site:` (see below)                                                                                                                                                               |
-| `engines`     | list                                                             | Engines that can serve it (provisional)                                                                                                                                                                 |
+| `engines`     | list                                                             | Engines that can serve it (verified against the operator matrix)                                                                                                                                        |
 | `result_type` | `web` \| `news` \| `scholar`                                     | SERP endpoint                                                                                                                                                                                           |
 | `signal`      | text                                                             | What marks a hit (used for scoring + summary)                                                                                                                                                           |
 | `priority`    | 1–3                                                              | 1 = run first; budget cap drops 3s first                                                                                                                                                                |
@@ -62,13 +66,13 @@ Queries are written in **Google dialect**. The compiler translates per engine us
 
 ### `scope_mode`
 
-| Value        | Compiler adds                                                    | Use                                  |
-| ------------ | ---------------------------------------------------------------- | ------------------------------------ |
-| `required`   | `site:{domain}` for each B1 domain; template skipped if B1 empty | Anything about the target's own site |
-| `optional`   | `site:` if B1 given, nothing otherwise                           | Documents, topic research            |
-| `subdomains` | `site:*.{domain} -site:www.{domain}`                             | Subdomain discovery                  |
-| `none`       | nothing; uses `{name}`/`{domain}` as text instead                | Mentions elsewhere on the web        |
-| `platform`   | `site:{platform}` from the template's own enum                   | Mentions on GitHub, Reddit, etc.     |
+| Value        | Compiler adds                                                       | Use                                  |
+| ------------ | ------------------------------------------------------------------- | ------------------------------------ |
+| `required`   | `site:{domain}` for each B1 domain; template skipped if B1 empty    | Anything about the target's own site |
+| `optional`   | `site:` if B1 given, nothing otherwise                              | Documents, topic research            |
+| `subdomains` | `site:{domain} -site:www.{domain}` (`site:*.` is ignored by Google) | Subdomain discovery                  |
+| `none`       | nothing; uses `{name}`/`{domain}` as text instead                   | Mentions elsewhere on the web        |
+| `platform`   | `site:{platform}` from the template's own enum                      | Mentions on GitHub, Reddit, etc.     |
 
 ### Scope rule for `site:` ([D-007](./Decisions.md#d-007))
 
@@ -143,7 +147,7 @@ max_pick: 4
 combine: or
 vars: []
 scope_mode: optional
-engines: [google, bing, brave]
+engines: [google]
 result_type: web
 signal: URL ends in the requested extension
 priority: 1
@@ -164,7 +168,7 @@ max_pick: 3
 combine: or
 vars: []
 scope_mode: required
-engines: [google, bing]
+engines: [google]
 result_type: web
 signal: document text contains the label
 priority: 2
@@ -196,7 +200,7 @@ max_pick: 3
 combine: or
 vars: []
 scope_mode: optional
-engines: [google, bing]
+engines: [google]
 result_type: web
 signal: PDF whose title names the document kind
 priority: 2
@@ -216,7 +220,7 @@ max_pick: 3
 combine: or
 vars: []
 scope_mode: optional
-engines: [google, bing]
+engines: [google]
 result_type: web
 signal: structured data file
 priority: 3
@@ -238,7 +242,7 @@ max_pick: 3
 combine: or
 vars: []
 scope_mode: required
-engines: [google, bing]
+engines: [google]
 result_type: web
 signal: Apache/Nginx autoindex page
 priority: 1
@@ -291,7 +295,7 @@ example: "site:target.com (filetype:sql OR filetype:bak)"
 id: exp_error_messages
 goal: exposed_pages
 title: Pages leaking error messages
-query: 'intext:"{error}"'
+query: '"{error}"'
 params:
   error:
     [
@@ -306,13 +310,13 @@ max_pick: 2
 combine: or
 vars: []
 scope_mode: required
-engines: [google, bing]
+engines: [google]
 result_type: web
 signal: indexed page shows a server error string
 priority: 2
 sensitivity: security
 status: approved
-example: 'site:target.com intext:"Fatal error"'
+example: 'site:target.com "Fatal error"'
 ```
 
 ```yaml
@@ -326,7 +330,7 @@ max_pick: 2
 combine: or
 vars: []
 scope_mode: required
-engines: [google, bing]
+engines: [google]
 result_type: web
 signal: framework debug / default page indexed
 priority: 2
@@ -347,14 +351,14 @@ max_pick: 0
 combine: split
 vars: [domain]
 scope_mode: subdomains
-engines: [google, bing, brave]
+engines: [google]
 result_type: web
 signal: distinct hostnames under the target domain
 priority: 1
 sensitivity: security
 status: approved
 notes: runner may iterate, adding -site:<found host> for hosts already seen (budget-limited)
-example: "site:*.target.com -site:www.target.com"
+example: "site:target.com -site:www.target.com"
 ```
 
 ```yaml
@@ -368,7 +372,7 @@ max_pick: 4
 combine: or
 vars: []
 scope_mode: required
-engines: [google, bing]
+engines: [google]
 result_type: web
 signal: authentication page
 priority: 1
@@ -388,7 +392,7 @@ max_pick: 4
 combine: or
 vars: []
 scope_mode: required
-engines: [google, bing]
+engines: [google]
 result_type: web
 signal: admin UI reachable from the web
 priority: 1
@@ -408,7 +412,7 @@ max_pick: 4
 combine: or
 vars: []
 scope_mode: required
-engines: [google, bing]
+engines: [google]
 result_type: web
 signal: API spec or explorer UI
 priority: 2
@@ -443,20 +447,20 @@ example: "site:target.com (inurl:staging OR inurl:uat)"
 id: tech_powered_by
 goal: tech_fingerprinting
 title: "Powered by" footers
-query: 'intext:"powered by {tech}"'
+query: '"powered by {tech}"'
 params:
   tech: [WordPress, Drupal, Joomla, Shopify, Magento, WooCommerce, Wix, Squarespace, Ghost, HubSpot]
 max_pick: 4
 combine: or
 vars: []
 scope_mode: required
-engines: [google, bing]
+engines: [google]
 result_type: web
 signal: footer names the platform
 priority: 1
 sensitivity: normal
 status: approved
-example: 'site:target.com intext:"powered by WordPress"'
+example: 'site:target.com "powered by WordPress"'
 ```
 
 ```yaml
@@ -470,7 +474,7 @@ max_pick: 4
 combine: or
 vars: []
 scope_mode: required
-engines: [google, bing]
+engines: [google]
 result_type: web
 signal: path unique to a framework or CMS
 priority: 1
@@ -494,7 +498,7 @@ max_pick: 3
 combine: or
 vars: [name]
 scope_mode: platform
-engines: [google, bing]
+engines: [google]
 result_type: web
 signal: job listing by the target naming technologies
 priority: 3
@@ -516,7 +520,7 @@ max_pick: 3
 combine: split
 vars: [domain]
 scope_mode: platform
-engines: [google, bing]
+engines: [google]
 result_type: web
 signal: repo/file referencing a target hostname
 priority: 1
@@ -536,7 +540,7 @@ max_pick: 4
 combine: split
 vars: [domain]
 scope_mode: platform
-engines: [google, bing]
+engines: [google]
 result_type: web
 signal: paste mentioning the target domain
 priority: 2
@@ -565,7 +569,7 @@ max_pick: 4
 combine: split
 vars: [name]
 scope_mode: platform
-engines: [google, bing]
+engines: [google]
 result_type: web
 signal: public share on a collaboration platform
 priority: 1
@@ -585,7 +589,7 @@ max_pick: 3
 combine: split
 vars: [name]
 scope_mode: platform
-engines: [google, bing, brave]
+engines: [google]
 result_type: web
 signal: discussion thread naming the target
 priority: 2
@@ -605,7 +609,7 @@ max_pick: 3
 combine: split
 vars: [name]
 scope_mode: platform
-engines: [google, bing]
+engines: [google]
 result_type: web
 signal: post or page naming the target
 priority: 3
@@ -627,7 +631,7 @@ max_pick: 4
 combine: or
 vars: []
 scope_mode: required
-engines: [google, bing, brave]
+engines: [google]
 result_type: web
 signal: official company information page
 priority: 1
@@ -658,7 +662,7 @@ max_pick: 4
 combine: split
 vars: [name]
 scope_mode: platform
-engines: [google, bing]
+engines: [google]
 result_type: web
 signal: company profile page
 priority: 1
@@ -681,7 +685,7 @@ max_pick: 3
 combine: or
 vars: [name]
 scope_mode: optional
-engines: [google, bing]
+engines: [google]
 result_type: web
 signal: filing or investor document
 priority: 2
@@ -703,7 +707,7 @@ max_pick: 3
 combine: or
 vars: []
 scope_mode: required
-engines: [google, bing, brave]
+engines: [google]
 result_type: web
 signal: pricing or plan comparison page
 priority: 1
@@ -723,7 +727,7 @@ max_pick: 3
 combine: split
 vars: [name]
 scope_mode: platform
-engines: [google, bing]
+engines: [google]
 result_type: web
 signal: product review page
 priority: 1
@@ -743,7 +747,7 @@ max_pick: 3
 combine: or
 vars: [name]
 scope_mode: none
-engines: [google, bing, brave]
+engines: [google]
 result_type: web
 signal: article comparing the product with others
 priority: 2
@@ -763,7 +767,7 @@ max_pick: 3
 combine: or
 vars: []
 scope_mode: required
-engines: [google, bing]
+engines: [google]
 result_type: web
 signal: named-customer page on the competitor site
 priority: 3
@@ -784,7 +788,7 @@ max_pick: 0
 combine: split
 vars: [name]
 scope_mode: none
-engines: [google, bing]
+engines: [google]
 result_type: news
 signal: news article naming the target
 priority: 1
@@ -805,7 +809,7 @@ max_pick: 3
 combine: or
 vars: [name]
 scope_mode: none
-engines: [google, bing]
+engines: [google]
 result_type: news
 signal: article about the event type
 priority: 1
@@ -824,7 +828,7 @@ max_pick: 0
 combine: split
 vars: [name, domain]
 scope_mode: none
-engines: [google, bing, brave]
+engines: [google]
 result_type: web
 signal: page on another site naming the target
 priority: 2
@@ -845,7 +849,7 @@ max_pick: 0
 combine: split
 vars: [keywords]
 scope_mode: optional
-engines: [google, bing, brave]
+engines: [google]
 result_type: web
 signal: page matching the keyword layers
 priority: 1
@@ -866,7 +870,7 @@ max_pick: 3
 combine: or
 vars: [keywords]
 scope_mode: optional
-engines: [google, bing]
+engines: [google]
 result_type: web
 signal: document matching the keywords
 priority: 2
@@ -891,7 +895,7 @@ max_pick: 3
 combine: or
 vars: [keywords]
 scope_mode: platform
-engines: [google, bing]
+engines: [google]
 result_type: web
 signal: result from a government, academic or institutional TLD
 priority: 2
