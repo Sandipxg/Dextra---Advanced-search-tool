@@ -8,7 +8,7 @@ _None_
 
 ## 🔜 Up next
 
-- [ ] T-015 Live end-to-end check with the SerpAPI key: `pnpm --filter @dextra/api try-run --yes` (at most 5 searches); compare groups and ranking with what a person would pick
+- [ ] T-016 Rule-based selector: only pick templates whose signal fits the description (e.g. skip `doc_sensitive_label` unless the request is about internal/confidential files); the LLM path already does this
 - [ ] T-014 Set `DATABASE_URL` / `DATABASE_TEST_URL` in `.env`, run `pnpm --filter @dextra/db db create` (both URLs), `pnpm db:setup`, then `pnpm test` so the 8 API tests run against Postgres
 - [ ] T-005b Live selector run with an `ANTHROPIC_API_KEY` (`pnpm --filter @dextra/selector try`); compare LLM picks with rule picks on a few specs
 - [ ] T-001b Re-run the operator matrix with Serper and Brave keys; decide whether to enable them (D-015)
@@ -26,6 +26,7 @@ _None_
 
 ## ✅ Done (recent)
 
+- [x] T-015 Live end-to-end check with SerpAPI: 3 searches, 28 results, all in scope, no fallback needed (2026-11-25)
 - [x] T-009 Runner with paging, Soft fallback and F4 outside batches (D-023) (2026-11-25)
 - [x] T-010 Dedupe, scoring, main / outside / unverified groups, CSV/JSON exports, results API (D-023) (2026-11-25)
 - [x] Phase 7 code: `@dextra/db` (tables, hand-written migration, template seed), `apps/api` (Hono, Better Auth, plans/runs/confirm/locations, audit log, rate limit, Pino), CI Postgres service (D-022) (2026-11-25) — not yet run against a local database (T-014)
