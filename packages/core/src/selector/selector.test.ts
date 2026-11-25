@@ -1,14 +1,15 @@
 import { describe, expect, it } from 'vitest'
 import { buildPlan } from '../compiler/compile'
 import { validateSelection } from '../compiler/selection'
+import { PlatformSchema } from '../schema/enums'
 import { GOALS } from '../schema/goal'
 import { type IntakeSpecInput, IntakeSpecSchema } from '../schema/intake-spec'
-import { TEMPLATE_IDS } from '../templates/index'
+import { approvedTemplates, TEMPLATE_IDS } from '../templates/index'
 import { applyExclusions } from './exclusions'
 import { MAX_SELECTIONS, type SelectorOutput, toSelections } from './output'
 import { buildSelectorUserMessage, SELECTOR_SYSTEM_PROMPT } from './prompt'
 import { routeEngines } from './router'
-import { mentions, ruleBasedSelections } from './rules'
+import { mentions, PLATFORM_SITES, ruleBasedSelections } from './rules'
 
 const spec = (input: Partial<IntakeSpecInput> = {}) =>
   IntakeSpecSchema.parse({
@@ -121,6 +122,55 @@ describe('ruleBasedSelections: relevance (T-016)', () => {
   })
 })
 
+describe('platforms and media (D-027)', () => {
+  it('maps every platform to a template a normal search can use', () => {
+    const normalSites = new Set(
+      approvedTemplates()
+        .filter((t) => t.sensitivity === 'normal')
+        .flatMap((t) => t.params.platform ?? []),
+    )
+    for (const platform of PlatformSchema.options) {
+      const sites = PLATFORM_SITES[platform]
+      expect(sites.length, platform).toBeGreaterThan(0)
+      expect(
+        sites.some((site) => normalSites.has(site)),
+        platform,
+      ).toBe(true)
+    }
+  })
+
+  it('searches GitHub by name in a normal run (was security-only before)', () => {
+    const picks = ruleBasedSelections(
+      spec({
+        goal: 'third_party_mentions',
+        scope: { domains: [] },
+        keywords: { all: ['Infosys'] },
+        sources: { platforms: { value: ['github', 'bitbucket'] } },
+      }),
+    )
+    expect(picks.find((p) => p.templateId === 'tp_code_hosting')?.params.platform).toEqual([
+      'github.com',
+      'bitbucket.org',
+    ])
+    expect(picks.map((p) => p.templateId)).not.toContain('tp_code_mentions')
+  })
+
+  it('picks media files for an Audio tick or media words, not for ordinary document searches', () => {
+    const audio = ruleBasedSelections(spec({ filters: { content: { value: ['audio'] } } }))
+    expect(audio.find((p) => p.templateId === 'doc_media_files')?.params.ext).toEqual([
+      'mp3',
+      'wav',
+      'm4a',
+      'ogg',
+      'flac',
+    ])
+    const words = ruleBasedSelections(spec({ description: 'Product videos and podcast episodes' }))
+    expect(words.map((p) => p.templateId)).toContain('doc_media_files')
+    const plain = ruleBasedSelections(spec({ filters: { content: { value: ['pdf'] } } }))
+    expect(plain.map((p) => p.templateId)).not.toContain('doc_media_files')
+  })
+})
+
 describe('ruleBasedSelections', () => {
   it('follows the content filter for file extensions', () => {
     const picks = ruleBasedSelections(spec({ filters: { content: { value: ['presentation'] } } }))
@@ -132,7 +182,12 @@ describe('ruleBasedSelections', () => {
   it('keeps security templates out of non-security runs', () => {
     const mentions = { scope: { domains: ['target.com'], names: ['Target Corp'] } }
     const normal = ruleBasedSelections(spec({ goal: 'third_party_mentions', ...mentions }))
-    expect(normal.map((p) => p.templateId)).toEqual(['tp_public_docs', 'tp_forums', 'tp_social'])
+    expect(normal.map((p) => p.templateId)).toEqual([
+      'tp_public_docs',
+      'tp_forums',
+      'tp_code_hosting',
+      'tp_social',
+    ])
     const authorized = ruleBasedSelections(
       spec({ ...security, goal: 'third_party_mentions', ...mentions }),
     )

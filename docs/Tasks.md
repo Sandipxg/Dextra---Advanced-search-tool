@@ -25,6 +25,7 @@ _None_
 ## ✅ Done (recent)
 
 - [x] Simpler form (D-026): keywords required, description optional, 15 fields removed from the UI, report shows 7 rows + scroll with CSV/JSON/PDF downloads (2026-11-25)
+- [x] T-019 More platforms (25, grouped, "Select all"), Images / Video / Audio content types, `tp_code_hosting` and `doc_media_files` templates (D-027) (2026-11-25)
 - [x] T-011 Feedback loop: result ratings, template counters, learned ordering nudges, selector track record, review report (D-025) (2026-11-25)
 - [x] T-014 Local Postgres 18: `dextra` + `dextra_test` created, migrated, seeded; all 11 API tests pass; full stack checked in the browser with 2 real SerpAPI searches (2026-11-25)
 - [x] T-007 Web app: intake form (basic + advanced + security), pre-run summary, progress, report with groups and exports, demo mode (D-024) (2026-11-25)

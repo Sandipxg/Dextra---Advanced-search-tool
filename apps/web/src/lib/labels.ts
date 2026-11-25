@@ -1,4 +1,4 @@
-import type { ContentType, Goal, Strictness, UseCase } from '@dextra/core'
+import type { ContentType, Goal, Platform, Strictness, UseCase } from '@dextra/core'
 
 /** What the user sees for each stored code (D-005: codes are stored, labels shown). */
 export const GOAL_LABELS: Record<Goal, string> = {
@@ -40,6 +40,9 @@ export const CONTENT_LABELS: Record<ContentType, string> = {
   presentation: 'Presentations',
   text: 'Text files',
   dataset: 'Datasets (CSV/JSON)',
+  image: 'Images',
+  video: 'Video',
+  audio: 'Audio',
 }
 
 export const DEPTH_LABELS = {
@@ -68,16 +71,51 @@ export const SUBDOMAIN_LABELS = {
 
 export const WHERE_LABELS = { anywhere: 'Anywhere', title: 'Page title', url: 'URL' } as const
 
-export const PLATFORM_LABELS = {
+export const PLATFORM_LABELS: Record<Platform, string> = {
+  linkedin: 'LinkedIn',
+  x: 'X',
+  facebook: 'Facebook',
+  instagram: 'Instagram',
+  youtube: 'YouTube',
+  tiktok: 'TikTok',
+  pinterest: 'Pinterest',
+  reddit: 'Reddit',
+  stackoverflow: 'Stack Overflow',
+  quora: 'Quora',
+  hacker_news: 'Hacker News',
+  medium: 'Medium',
+  substack: 'Substack',
+  dev_to: 'DEV',
   github: 'GitHub',
   gitlab: 'GitLab',
-  stackoverflow: 'Stack Overflow',
-  linkedin: 'LinkedIn',
-  reddit: 'Reddit',
-  x: 'X',
-  public_docs: 'Public Notion / Trello / Google Docs',
+  bitbucket: 'Bitbucket',
+  public_docs: 'Notion / Trello / Google Docs',
   slideshare_scribd: 'SlideShare / Scribd',
-} as const
+  crunchbase: 'Crunchbase',
+  glassdoor: 'Glassdoor',
+  g2: 'G2',
+  capterra: 'Capterra',
+  trustpilot: 'Trustpilot',
+  product_hunt: 'Product Hunt',
+}
+
+/** Display groups for the platform picker; a test checks every platform appears once. */
+export const PLATFORM_GROUPS: ReadonlyArray<{ label: string; platforms: Platform[] }> = [
+  {
+    label: 'Social',
+    platforms: ['linkedin', 'x', 'facebook', 'instagram', 'youtube', 'tiktok', 'pinterest'],
+  },
+  {
+    label: 'Communities and blogs',
+    platforms: ['reddit', 'stackoverflow', 'quora', 'hacker_news', 'medium', 'substack', 'dev_to'],
+  },
+  { label: 'Code', platforms: ['github', 'gitlab', 'bitbucket'] },
+  { label: 'Docs and files', platforms: ['public_docs', 'slideshare_scribd'] },
+  {
+    label: 'Business and reviews',
+    platforms: ['crunchbase', 'glassdoor', 'g2', 'capterra', 'trustpilot', 'product_hunt'],
+  },
+]
 
 export const PREFERENCE_LABELS = {
   none: 'No preference',

@@ -71,7 +71,10 @@ const FiltersSchema = z.object({
     .prefault({}),
   /** D1 — empty = any content */
   content: z
-    .object({ value: uniqueList(ContentTypeSchema, 7).default([]), mode: soft })
+    .object({
+      value: uniqueList(ContentTypeSchema, ContentTypeSchema.options.length).default([]),
+      mode: soft,
+    })
     .prefault({}),
 })
 
@@ -94,7 +97,10 @@ const SourcesSchema = z.object({
     .pipe(z.array(ResultTypeSchema).min(1))
     .default(['web']),
   /** E3 */ platforms: z
-    .object({ value: uniqueList(PlatformSchema, 8).default([]), mode: soft })
+    .object({
+      value: uniqueList(PlatformSchema, PlatformSchema.options.length).default([]),
+      mode: soft,
+    })
     .prefault({}),
   /** E4 */ never: uniqueList(DomainSchema, 100).default([]),
   /** E5 */ preference: SourcePreferenceSchema.default('none'),
