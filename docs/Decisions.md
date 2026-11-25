@@ -1,5 +1,13 @@
 # Decisions
 
+## D-019 — Template library: Markdown source, generated TS module
+
+- **Date:** 2026-11-25
+- **Status:** Accepted
+- **Context:** T-004b. The library lives in Markdown for review, but `@dextra/core` runs in the browser too and must not read files at runtime.
+- **Decision:** `docs/Template-Library.md` stays the source of truth. `gen:templates` parses its YAML blocks, validates them with `TemplateSchema` + `TemplateLibrarySchema`, and writes `library.generated.ts` (`TEMPLATE_IDS` as a const tuple, `TEMPLATE_DATA`). `templates/index.ts` re-validates the data at load and exposes `TemplateIdSchema`, `getTemplate`, `templatesForGoal`, `paramValuesFor` (regional filter). A test compares the generated module with the Markdown. The Phase 7 DB seed reuses `parseTemplateLibrary`.
+- **Consequences:** Editing a template = edit the Markdown, run `gen:templates`, commit both. `yaml` is a dev dependency only.
+
 ## D-018 — Intake spec schema details
 
 - **Date:** 2026-11-25

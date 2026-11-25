@@ -21,4 +21,5 @@ Design so far was done in a claude.ai chat on 2026-11-25. Everything decided the
 - Stack: see D-014. Check the personal-preferences skill before adding libraries.
 - Commands: `pnpm install`, `pnpm check` (lint + typecheck + test), `pnpm format`. Run `pnpm check` before every commit.
 - Internal packages export TS source (`./src/index.ts`); no default exports (Biome rule).
+- After editing `docs/Template-Library.md`, run `pnpm --filter @dextra/core gen:templates` and commit both files; a test fails if they drift.
 - Commit code and its docs together. Conventional Commits with task IDs. Never push.

@@ -2,7 +2,9 @@
 
 _Status: **v1.1 — content approved, engines verified for Google** (Bing/Brave pending, see [D-015](./Decisions.md#d-015)) · Last updated: 2026-11-25 · Task: T-004 · Decisions: [D-007 – D-013, D-015 – D-017](./Decisions.md)_
 
-The LLM never writes a dork. It picks template `id`s from this file and picks values for each template's **params** from the listed enums. Code fills the **vars** from the intake spec, adds the scope/exclusion/keyword layers, translates operators per engine, and runs the guardrails. Later a seed script parses the YAML blocks below into the `templates` table.
+The LLM never writes a dork. It picks template `id`s from this file and picks values for each template's **params** from the listed enums. Code fills the **vars** from the intake spec, adds the scope/exclusion/keyword layers, translates operators per engine, and runs the guardrails. The YAML blocks below are the source of truth: `pnpm --filter @dextra/core gen:templates` validates them against `TemplateSchema` and writes `packages/core/src/templates/library.generated.ts`; a test fails if that file is stale. The DB seed (Phase 7) uses the same parser ([D-019](./Decisions.md#d-019)).
+
+**Validation rules** (`packages/core/src/templates/schema.ts`): id has the goal prefix; no positive `site:`, `ext:`, `intext:`/`inbody:` or retired operators in `query`; every `{placeholder}` is a param or var and every param/var is used; `platform` param iff `scope_mode: platform`; param values carry no quotes, braces or newlines; security goals → `sensitivity: security`; security templates are never `none`/`optional` scope; `regional` keys are real param values; ids are unique. Quote YAML values that contain `:` or start with `"`.
 
 ---
 
@@ -298,14 +300,12 @@ title: Pages leaking error messages
 query: '"{error}"'
 params:
   error:
-    [
-      You have an error in your SQL syntax,
-      Warning: mysql_,
-      Fatal error,
-      Traceback (most recent call last),
-      Stack trace,
-      Exception Details,
-    ]
+    - "You have an error in your SQL syntax"
+    - "Warning: mysql_"
+    - "Fatal error"
+    - "Traceback (most recent call last)"
+    - "Stack trace"
+    - "Exception Details"
 max_pick: 2
 combine: or
 vars: []
@@ -349,7 +349,7 @@ query: ""
 params: {}
 max_pick: 0
 combine: split
-vars: [domain]
+vars: []
 scope_mode: subdomains
 engines: [google]
 result_type: web
@@ -446,7 +446,7 @@ example: "site:target.com (inurl:staging OR inurl:uat)"
 ```yaml
 id: tech_powered_by
 goal: tech_fingerprinting
-title: "Powered by" footers
+title: '"Powered by" footers'
 query: '"powered by {tech}"'
 params:
   tech: [WordPress, Drupal, Joomla, Shopify, Magento, WooCommerce, Wix, Squarespace, Ghost, HubSpot]

@@ -17,12 +17,12 @@
 
 ## Packages
 
-| Package                               | Status        | Contents                                                                                                                                                                                   |
-| ------------------------------------- | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `packages/core`                       | Schema done   | `IntakeSpecSchema` (all form fields, cross-field rules), enums, domain/URL validators, ISO lists, `isSecurityRun`, `needsKeywordFollowUp`                                                  |
-| `packages/env`                        | Done          | `createServerEnv()` — typed server env, requires ≥1 SERP key                                                                                                                               |
-| `packages/serp`                       | Adapters done | `SerpProvider` interface; Serper (Google web/news/scholar), SerpAPI (Google + Bing web), Brave (web/news); `createProviders`, `resolveProvider`; spike script `scripts/operator-matrix.ts` |
-| `packages/db`, `apps/api`, `apps/web` | Not started   | See [Implementation Plan](./Implementation-Plan.md)                                                                                                                                        |
+| Package                               | Status             | Contents                                                                                                                                                                                                                                                                          |
+| ------------------------------------- | ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `packages/core`                       | Schema + templates | `IntakeSpecSchema` (all form fields, cross-field rules), enums, domain/URL validators, ISO lists, `isSecurityRun`, `needsKeywordFollowUp`                                                  ; `TEMPLATES`, `TemplateIdSchema`, `getTemplate`, `templatesForGoal`, `paramValuesFor` |
+| `packages/env`                        | Done               | `createServerEnv()` — typed server env, requires ≥1 SERP key                                                                                                                                                                                                                      |
+| `packages/serp`                       | Adapters done      | `SerpProvider` interface; Serper (Google web/news/scholar), SerpAPI (Google + Bing web), Brave (web/news); `createProviders`, `resolveProvider`; spike script `scripts/operator-matrix.ts`                                                                                        |
+| `packages/db`, `apps/api`, `apps/web` | Not started        | See [Implementation Plan](./Implementation-Plan.md)                                                                                                                                                                                                                               |
 
 ## Pipeline
 

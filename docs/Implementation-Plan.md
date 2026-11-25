@@ -90,7 +90,7 @@ In `packages/core/schema`:
 
 ## Phase 4 — Template library (T-004, 1–2 days)
 
-> ✅ Content done: `docs/Template-Library.md` v1.0 (36 templates, decisions D-007–D-013). Remaining work: `TemplateSchema` in Zod, YAML seed script (T-004b), engine lists re-checked against the T-001 matrix.
+> ✅ Done 2026-11-25: library v1.1 (engines checked in T-001), `TemplateSchema` + generator on `feat/t-004b-template-schema` (D-019). DB seed happens in Phase 7.
 
 - `TemplateSchema`: `id`, `goal`, `query` (with `{placeholders}`), `params` (each an enum list), `engines`, `signal`, `priority`, `requiresScope: boolean`.
 - ~20 starter templates covering every A1 goal, e.g.
