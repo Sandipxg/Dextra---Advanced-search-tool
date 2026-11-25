@@ -106,6 +106,8 @@ In `packages/core/schema`:
 
 ## Phase 5 — Query compiler + guardrails (T-006, 2 days)
 
+> ✅ Done 2026-11-25 on `feat/t-006-compiler-guardrails` (D-020).
+
 This is the safety boundary; build it **before** the LLM.
 
 - **Compiler** (`compile(spec, selection) → PlannedQuery[]`): fills placeholders, then appends layers from Context.md in order — scope (`site:`), signal, exclusion (A5/B3/E4 → `-site:`, `-term`; B2 → `-site:www.`), precision (D2 terms, D3 `(a OR b)`, D4 quotes, D5 `intitle:`/`inurl:`/`intext:`). Maps C1–C5 to API params (`gl`, `location`, `hl`, `tbs=qdr:*|cdr:1,cd_min,cd_max`), F2 to `num`.

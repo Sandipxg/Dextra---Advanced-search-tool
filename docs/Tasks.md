@@ -10,7 +10,6 @@ _None_
 
 - [ ] T-001b Re-run the operator matrix with Serper and Brave keys; decide whether to enable them (D-015)
 - [ ] T-005 Template selector: LLM tool call with enum template IDs + Zod-validated output
-- [ ] T-006 Guardrails: scope check, per-engine operator check, budget cap, authorization gate — plus result re-check against scope/signal (D-016)
 
 ## 🧊 Backlog
 
@@ -27,6 +26,7 @@ _None_
 
 ## ✅ Done (recent)
 
+- [x] T-006 Query compiler (`buildPlan`) + query guard + result guard; selection validation; budget, cross-goal cap, Soft fallback / F4 outside batches (D-020) (2026-11-25)
 - [x] T-004b `TemplateSchema` + library rules, Markdown → generated module, `TemplateIdSchema`; DB seed moves to Phase 7 (D-019) (2026-11-25)
 - [x] T-003 Intake spec Zod schema `IntakeSpecSchema` + validators + generated ISO lists, 49 tests (D-018) (2026-11-25)
 - [x] T-001 SERP provider spike: adapters + operator matrix; SerpAPI/Google for v1, Bing off, results re-checked in code, pages of 10 (D-015 – D-017) (2026-11-25)

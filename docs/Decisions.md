@@ -1,5 +1,23 @@
 # Decisions
 
+## D-020 — Query compiler rules
+
+- **Date:** 2026-11-25
+- **Status:** Accepted
+- **Context:** T-006 (`buildPlan` in `packages/core/src/compiler`). The spec left some compile-time behaviour open.
+- **Decision:**
+  - **Layer order:** scope → template signal → D1 content → D2/D4 keywords (D5 placement) → exclusions (`-site:` for B3 + E4, `-term` for confirmed A5).
+  - **Scope vs B5:** `required` and `subdomains` templates are always scoped to B1, whatever B5 says; B5 Soft/Open only affects `optional` templates. Widening a login-page template to the whole web would be wrong.
+  - **B2 "main domain only"** can't be expressed reliably in Google, so it is enforced by the result check only. "Subdomains only" adds `-site:www.d`. `*.d` compiles to `site:d` (Google ignores `site:*.`).
+  - **D3 (any of)** goes into the query only for `{keywords}` templates; elsewhere it is Open (re-rank).
+  - **D1** adds a `filetype:` group only for documents / general / company / competitor templates that don't already have `filetype:`.
+  - **C3** sends only the first language (`hl` takes one value).
+  - **Soft filters:** each primary query gets one widened twin with _all_ its Soft filters removed. With F4 on, the first ~20% of the budget's widened twins run as the "outside" batch; the rest are fallbacks that run only if primary results < F3. (Fixed 20% for now; T-012 still open.)
+  - **Fan-out caps:** ≤ 10 queries per template, ≤ 3 names/domains per var, ≤ 5 domains per `site:` OR group. Budget keeps priority 1 first, then selection order; cross-goal queries ≤ 30% of budget.
+  - **User text** (names, keywords, exclusions) is cleaned and quoted whenever it could act as an operator. Vars are inserted as compiled fragments; spaced param values outside quotes are quoted.
+  - **Query guard** (`checkQuery`) runs on every final string: only `site:`, `filetype:`, `intitle:`, `inurl:`; positive `site:` must be in B1 (subdomains allowed, lookalikes rejected) or the producing template's picked platforms; balanced quotes; no leftover placeholders; ≤ 32 words. **Result guard** (`checkResult`) re-checks scope, never-show hosts and the URL/title signal (D-016).
+- **Consequences:** A plan reports dropped templates (with reasons), rejected queries (with violations), request counts in pages, and the strictness table for the pre-run summary.
+
 ## D-019 — Template library: Markdown source, generated TS module
 
 - **Date:** 2026-11-25
