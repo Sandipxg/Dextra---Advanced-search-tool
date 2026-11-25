@@ -35,7 +35,7 @@
 
 ## Operator matrix — reviewed 2026-11-25
 
-Not yet probed: `filetype:` with image, video and audio extensions (`doc_media_files`, D-027). Check it the next time the matrix runs. A live run of `(filetype:mp4 OR … OR filetype:mkv) shiddat movie` returned nothing; the same keywords on the Videos tab (`tbm=vid`) returned 20 relevant results, some as opaque `google.com/goto` redirects (D-028).
+Not yet probed: `filetype:` with image, video and audio extensions (`doc_media_files`, D-027). Check it the next time the matrix runs. A live run of `(filetype:mp4 OR … OR filetype:mkv) shiddat movie` returned nothing. Media ticks now search media sites and plain web pages instead (D-028).
 
 Run with a SerpAPI key only, probe domain `nasa.gov`, one query per operator. Raw verdicts are in [Operator Matrix](./Operator-Matrix.md); this table corrects them after reading the returned URLs.
 

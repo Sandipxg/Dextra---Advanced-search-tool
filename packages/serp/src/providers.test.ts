@@ -117,52 +117,6 @@ describe('serpapi', () => {
     expect(params.get('as_yhi')).toBe('2024')
   })
 
-  it('maps videos to the Videos tab and images to Google Images (D-028)', () => {
-    const videos = new URL(
-      buildSerpApiRequest({ ...base, type: 'videos', num: 10, page: 2 }, KEY).url,
-    )
-    expect(videos.searchParams.get('engine')).toBe('google')
-    expect(videos.searchParams.get('tbm')).toBe('vid')
-    expect(videos.searchParams.get('start')).toBe('10')
-    const images = new URL(
-      buildSerpApiRequest({ ...base, type: 'images', num: 10, page: 2 }, KEY).url,
-    )
-    expect(images.searchParams.get('engine')).toBe('google_images')
-    expect(images.searchParams.get('ijn')).toBe('0')
-    expect(images.searchParams.get('tbm')).toBeNull()
-  })
-
-  it('parses video results and slices image pages', async () => {
-    const videos = createSerpApiProvider(
-      KEY,
-      jsonFetch({
-        video_results: [
-          { position: 1, link: 'https://youtube.com/watch?v=1', title: 'V' },
-          {
-            position: 2,
-            link: 'https://www.google.com/goto?url=CAESZwHE',
-            displayed_link: 'www.youtube.com › watch',
-            title: 'W',
-          },
-        ],
-      }),
-    )
-    const v = await videos.search({ ...base, type: 'videos' })
-    expect(v.results.map((r) => [r.url, r.source])).toEqual([
-      ['https://youtube.com/watch?v=1', undefined],
-      ['https://www.google.com/goto?url=CAESZwHE', 'www.youtube.com'],
-    ])
-
-    const many = Array.from({ length: 30 }, (_, i) => ({
-      position: i + 1,
-      link: `https://p${i + 1}.com`,
-      title: `I${i + 1}`,
-    }))
-    const images = createSerpApiProvider(KEY, jsonFetch({ images_results: many }))
-    const page2 = await images.search({ ...base, type: 'images', num: 10, page: 2 })
-    expect(page2.results.map((r) => r.url)).toEqual(many.slice(10, 20).map((m) => m.link))
-  })
-
   it('parses organic results and object sources', async () => {
     const provider = createSerpApiProvider(
       KEY,

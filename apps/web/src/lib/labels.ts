@@ -130,13 +130,7 @@ export const OUTPUT_LABELS = {
   json: 'JSON',
 } as const
 
-export const RESULT_TYPE_LABELS = {
-  web: 'Web',
-  news: 'News',
-  scholar: 'Scholar',
-  videos: 'Videos',
-  images: 'Images',
-} as const
+export const RESULT_TYPE_LABELS = { web: 'Web', news: 'News', scholar: 'Scholar' } as const
 
 const regionNames = new Intl.DisplayNames(['en'], { type: 'region' })
 const languageNames = new Intl.DisplayNames(['en'], { type: 'language' })
