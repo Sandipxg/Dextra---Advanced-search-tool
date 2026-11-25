@@ -19,7 +19,10 @@ export const AppShell = () => {
   if (session.isPending) {
     return <p className="p-8 text-sm text-muted">Loading…</p>
   }
-  if (!session.data) return <Navigate to="/sign-in" replace />
+  // A session response without a user (e.g. the API unreachable behind the proxy) counts
+  // as signed out instead of crashing the header.
+  const user = session.data?.user
+  if (!user) return <Navigate to="/sign-in" replace />
 
   return (
     <div className="min-h-screen">
@@ -44,7 +47,7 @@ export const AppShell = () => {
                 onChange={setAdvanced}
               />
             </label>
-            <span className="hidden text-sm text-muted sm:inline">{session.data.user.email}</span>
+            <span className="hidden text-sm text-muted sm:inline">{user.email}</span>
             <Button
               variant="ghost"
               onClick={async () => {
