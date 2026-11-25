@@ -13,12 +13,23 @@ import {
 /** E3 platforms → template platform values. */
 export const PLATFORM_SITES: Record<IntakeSpec['sources']['platforms']['value'][number], string[]> =
   {
+    linkedin: ['linkedin.com', 'linkedin.com/company', 'linkedin.com/jobs'],
+    x: ['x.com'],
+    facebook: ['facebook.com'],
+    instagram: ['instagram.com'],
+    youtube: ['youtube.com'],
+    tiktok: ['tiktok.com'],
+    pinterest: ['pinterest.com'],
+    reddit: ['reddit.com'],
+    stackoverflow: ['stackoverflow.com'],
+    quora: ['quora.com'],
+    hacker_news: ['news.ycombinator.com'],
+    medium: ['medium.com'],
+    substack: ['substack.com'],
+    dev_to: ['dev.to'],
     github: ['github.com'],
     gitlab: ['gitlab.com'],
-    stackoverflow: ['stackoverflow.com'],
-    linkedin: ['linkedin.com', 'linkedin.com/company', 'linkedin.com/jobs'],
-    reddit: ['reddit.com'],
-    x: ['x.com'],
+    bitbucket: ['bitbucket.org'],
     public_docs: [
       'docs.google.com',
       'drive.google.com',
@@ -27,6 +38,12 @@ export const PLATFORM_SITES: Record<IntakeSpec['sources']['platforms']['value'][
       'airtable.com',
     ],
     slideshare_scribd: ['slideshare.net', 'scribd.com'],
+    crunchbase: ['crunchbase.com'],
+    glassdoor: ['glassdoor.com'],
+    g2: ['g2.com'],
+    capterra: ['capterra.com'],
+    trustpilot: ['trustpilot.com'],
+    product_hunt: ['producthunt.com'],
   }
 
 const DEFAULT_PICKS = 2
@@ -48,7 +65,26 @@ export const OPT_IN_WORDS: Partial<Record<TemplateId, readonly string[]>> = {
   ],
   doc_data_files: ['data', 'dataset', 'csv', 'json', 'spreadsheet', 'excel', 'statistic', 'xml'],
   tech_stack_in_jobs: ['job', 'hiring', 'career', 'vacanc', 'recruit'],
+  doc_media_files: [
+    'image',
+    'photo',
+    'picture',
+    'logo',
+    'video',
+    'audio',
+    'music',
+    'song',
+    'podcast',
+    'recording',
+    'media',
+  ],
 }
+
+/** Opt-in templates that exist for a file type: a matching content-type tick opts them in. */
+const OPT_IN_BY_CONTENT: ReadonlySet<TemplateId> = new Set<TemplateId>([
+  'doc_data_files',
+  'doc_media_files',
+])
 
 /** Everything the user wrote about what they want, lowercased. */
 const requestText = (spec: IntakeSpec): string =>
@@ -134,9 +170,17 @@ export const ruleBasedSelections = (spec: IntakeSpec): Selection[] => {
   const security = isSecurityRun(spec)
   const text = requestText(spec)
   const sites = new Set(spec.sources.platforms.value.flatMap((p) => PLATFORM_SITES[p]))
+  const contentExts = new Set(spec.filters.content.value.flatMap((c) => CONTENT_TYPE_EXTENSIONS[c]))
+  // Opt-in templates run when the request mentions them; file-type templates also run when
+  // a ticked content type matches their file types (e.g. Audio → doc_media_files).
   const optedIn = (t: Template) => {
     const words = OPT_IN_WORDS[t.id as TemplateId]
-    return !words || words.some((w) => mentions(text, w))
+    if (!words) return true
+    if (words.some((w) => mentions(text, w))) return true
+    return (
+      OPT_IN_BY_CONTENT.has(t.id as TemplateId) &&
+      (t.params.ext ?? []).some((e) => contentExts.has(e))
+    )
   }
   const allowed = (t: Template) =>
     (security || t.sensitivity !== 'security') && canSupply(t, spec) && optedIn(t)

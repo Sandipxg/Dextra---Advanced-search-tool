@@ -49,17 +49,35 @@ export const ENABLED_ENGINES = ['google'] as const satisfies readonly Engine[]
 /** E2 result types. */
 export const ResultTypeSchema = z.enum(['web', 'news', 'scholar'])
 
-/** E3 outside platforms. */
+/** E3 outside platforms (D-027). Each maps to template platform values in `PLATFORM_SITES`. */
 export const PlatformSchema = z.enum([
+  'linkedin',
+  'x',
+  'facebook',
+  'instagram',
+  'youtube',
+  'tiktok',
+  'pinterest',
+  'reddit',
+  'stackoverflow',
+  'quora',
+  'hacker_news',
+  'medium',
+  'substack',
+  'dev_to',
   'github',
   'gitlab',
-  'stackoverflow',
-  'linkedin',
-  'reddit',
-  'x',
+  'bitbucket',
   'public_docs',
   'slideshare_scribd',
+  'crunchbase',
+  'glassdoor',
+  'g2',
+  'capterra',
+  'trustpilot',
+  'product_hunt',
 ])
+export type Platform = z.infer<typeof PlatformSchema>
 
 /** E5 source preference (re-ranking only). */
 export const SourcePreferenceSchema = z.enum(['none', 'official_first', 'community_first'])

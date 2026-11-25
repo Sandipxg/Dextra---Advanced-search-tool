@@ -1,6 +1,6 @@
 # Dork Template Library
 
-_Status: **v1.1 — content approved, engines verified for Google** (Bing/Brave pending, see [D-015](./Decisions.md#d-015)) · Last updated: 2026-11-25 · Task: T-004 · Decisions: [D-007 – D-013, D-015 – D-017](./Decisions.md)_
+_Status: **v1.2 — 38 templates, content approved, engines verified for Google** (media filetypes untested, [D-027](./Decisions.md#d-027)) (Bing/Brave pending, see [D-015](./Decisions.md#d-015)) · Last updated: 2026-11-25 · Task: T-004 · Decisions: [D-007 – D-013, D-015 – D-017](./Decisions.md)_
 
 The LLM never writes a dork. It picks template `id`s from this file and picks values for each template's **params** from the listed enums. Code fills the **vars** from the intake spec, adds the scope/exclusion/keyword layers, translates operators per engine, and runs the guardrails. The YAML blocks below are the source of truth: `pnpm --filter @dextra/core gen:templates` validates them against `TemplateSchema` and writes `packages/core/src/templates/library.generated.ts`; a test fails if that file is stale. The DB seed (Phase 7) uses the same parser ([D-019](./Decisions.md#d-019)).
 
@@ -99,6 +99,7 @@ The LLM picks from the primary goal's templates first. It may also pick template
 | 2   | doc_sensitive_label  | documents            | 2        | normal      |
 | 3   | doc_report_kind      | documents            | 2        | normal      |
 | 4   | doc_data_files       | documents            | 3        | normal      |
+| 4b  | doc_media_files      | documents            | 3        | normal      |
 | 5   | exp_dir_listing      | exposed_pages        | 1        | security    |
 | 6   | exp_config_files     | exposed_pages        | 1        | security    |
 | 7   | exp_backup_log_files | exposed_pages        | 2        | security    |
@@ -114,6 +115,7 @@ The LLM picks from the primary goal's templates first. It may also pick template
 | 17  | tech_stack_in_jobs   | tech_fingerprinting  | 3        | normal      |
 | 18  | tp_code_mentions     | third_party_mentions | 1        | security    |
 | 19  | tp_paste_mentions    | third_party_mentions | 2        | security    |
+| 19b | tp_code_hosting      | third_party_mentions | 3        | normal      |
 | 20  | tp_public_docs       | third_party_mentions | 1        | normal      |
 | 21  | tp_forums            | third_party_mentions | 2        | normal      |
 | 22  | tp_social            | third_party_mentions | 3        | normal      |
@@ -229,6 +231,27 @@ priority: 3
 sensitivity: normal
 status: approved
 example: "site:data.gov.in filetype:csv"
+```
+
+```yaml
+id: doc_media_files
+goal: documents
+title: Images, video and audio files
+query: "filetype:{ext}"
+params:
+  ext: [jpg, jpeg, png, gif, webp, svg, mp4, webm, mov, avi, mkv, mp3, wav, m4a, ogg, flac]
+max_pick: 6
+combine: or
+vars: []
+scope_mode: optional
+engines: [google]
+result_type: web
+signal: media file served at its own URL
+priority: 3
+sensitivity: normal
+status: approved
+notes: Google indexes far fewer media files than documents; untested in the operator matrix (D-027)
+example: "site:nasa.gov (filetype:mp4 OR filetype:mp3)"
 ```
 
 ### Exposed pages (`exposed_pages`) — security, authorization required
@@ -550,6 +573,27 @@ example: 'site:pastebin.com "target.com"'
 ```
 
 ```yaml
+id: tp_code_hosting
+goal: third_party_mentions
+title: Projects and code mentioning a name
+query: "{name}"
+params:
+  platform: [github.com, gitlab.com, bitbucket.org]
+max_pick: 3
+combine: split
+vars: [name]
+scope_mode: platform
+engines: [google]
+result_type: web
+signal: repository, issue or README naming the target
+priority: 3
+sensitivity: normal
+status: approved
+notes: searches a name or keywords, not the target domain (that is tp_code_mentions, security only)
+example: 'site:github.com "Target Corp"'
+```
+
+```yaml
 id: tp_public_docs
 goal: third_party_mentions
 title: Publicly shared docs and boards
@@ -565,7 +609,7 @@ params:
       slideshare.net,
       airtable.com,
     ]
-max_pick: 4
+max_pick: 7
 combine: split
 vars: [name]
 scope_mode: platform
@@ -581,17 +625,26 @@ example: 'site:trello.com "Target Corp"'
 ```yaml
 id: tp_forums
 goal: third_party_mentions
-title: Forum and Q&A discussions
+title: Forum, Q&A and blog discussions
 query: "{name}"
 params:
-  platform: [reddit.com, stackoverflow.com, quora.com, news.ycombinator.com]
-max_pick: 3
+  platform:
+    [
+      reddit.com,
+      stackoverflow.com,
+      quora.com,
+      news.ycombinator.com,
+      medium.com,
+      substack.com,
+      dev.to,
+    ]
+max_pick: 7
 combine: split
 vars: [name]
 scope_mode: platform
 engines: [google]
 result_type: web
-signal: discussion thread naming the target
+signal: discussion thread or post naming the target
 priority: 2
 sensitivity: normal
 status: approved
@@ -604,8 +657,9 @@ goal: third_party_mentions
 title: Social media mentions
 query: "{name}"
 params:
-  platform: [linkedin.com, x.com, facebook.com, instagram.com, youtube.com]
-max_pick: 3
+  platform:
+    [linkedin.com, x.com, facebook.com, instagram.com, youtube.com, tiktok.com, pinterest.com]
+max_pick: 7
 combine: split
 vars: [name]
 scope_mode: platform
@@ -723,7 +777,7 @@ title: Reviews on review platforms
 query: "{name}"
 params:
   platform: [g2.com, capterra.com, trustpilot.com, producthunt.com, gartner.com/reviews]
-max_pick: 3
+max_pick: 5
 combine: split
 vars: [name]
 scope_mode: platform

@@ -1,5 +1,16 @@
 # Decisions
 
+## D-027 — More platforms, "Select all", media content types
+
+- **Date:** 2026-11-25
+- **Status:** Accepted
+- **Context:** User asked for more "Also search on these platforms" options with a "Select all" checkbox, and for image, video and audio content types.
+- **Decision:**
+  - **Platforms (E3):** 25 options in 5 groups (Social, Communities and blogs, Code, Docs and files, Business and reviews). Added TikTok, Pinterest, Quora, Hacker News, Medium, Substack, DEV, Bitbucket and Trustpilot alongside the existing ones. A "Select all" checkbox (partly-ticked state when only some are picked) sits above the groups, with a note that each platform adds searches and the total shows on the review page.
+  - **Templates (library v1.2, 38 templates):** `tp_forums` covers Reddit, Stack Overflow, Quora, Hacker News, Medium, Substack and DEV; `tp_social` adds TikTok and Pinterest; `tp_public_docs` and these two now allow up to 7 sites so "Select all" isn't cut short. New `tp_code_hosting` searches `"{name}"` on GitHub, GitLab and Bitbucket in normal runs (`tp_code_mentions` stays security-only). New `doc_media_files` (`filetype:` jpg/png/gif/webp/svg, mp4/webm/mov/avi/mkv, mp3/wav/m4a/ogg/flac).
+  - **Content types (D1):** Images, Video, Audio. `doc_media_files` is opt-in: the rule selector picks it when one of these is ticked or the request mentions media words (image, photo, video, podcast…). A PDF-only request does not pick it.
+- **Consequences:** "Select all" at standard depth planned 28 queries (56 paid searches) for one keyword, so it is costly; the budget cap and the review page still apply. `filetype:` for media extensions has not been checked in the operator matrix yet (Context).
+
 ## D-026 — Simpler form: keywords first, fewer options
 
 - **Date:** 2026-11-25

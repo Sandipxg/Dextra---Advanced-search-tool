@@ -12,6 +12,9 @@ export const ContentTypeSchema = z.enum([
   'presentation',
   'text',
   'dataset',
+  'image',
+  'video',
+  'audio',
 ])
 export type ContentType = z.infer<typeof ContentTypeSchema>
 
@@ -24,4 +27,8 @@ export const CONTENT_TYPE_EXTENSIONS: Record<ContentType, readonly string[]> = {
   presentation: ['ppt', 'pptx', 'odp'],
   text: ['txt'],
   dataset: ['csv', 'json', 'xml', 'tsv'],
+  // Media (D-027): Google indexes far fewer of these than documents.
+  image: ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'],
+  video: ['mp4', 'webm', 'mov', 'avi', 'mkv'],
+  audio: ['mp3', 'wav', 'm4a', 'ogg', 'flac'],
 }

@@ -22,5 +22,5 @@ Design so far was done in a claude.ai chat on 2026-11-25. Everything decided the
 - Commands: `pnpm install`, `pnpm check` (lint + typecheck + test), `pnpm format`, `pnpm db:setup` (Better Auth tables + migrations + template seed), `pnpm --filter @dextra/api dev`, `pnpm --filter @dextra/web dev` (proxies `/api` to :3000) or `pnpm --filter @dextra/web dev:mock` (no API needed), `pnpm --filter @dextra/api template-report` (template evidence for library review). Run `pnpm check` before every commit.
 - Database migrations are hand-written (`pnpm --filter @dextra/db db new <name>`). Never run `db g`: it would drop Better Auth's tables.
 - Internal packages export TS source (`./src/index.ts`); no default exports (Biome rule).
-- After editing `docs/Template-Library.md`, run `pnpm --filter @dextra/core gen:templates` and commit both files; a test fails if they drift.
+- After editing `docs/Template-Library.md`, run `pnpm --filter @dextra/core gen:templates` and commit both files (a test fails if they drift), then `pnpm --filter @dextra/db seed` to refresh the local database.
 - Commit code and its docs together. Conventional Commits with task IDs. Never push.

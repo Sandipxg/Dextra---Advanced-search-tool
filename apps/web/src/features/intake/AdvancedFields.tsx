@@ -1,13 +1,13 @@
-import { PlatformSchema } from '@dextra/core'
 import { useQuery } from '@tanstack/react-query'
 import { useDeferredValue, useState } from 'react'
 import { Controller } from 'react-hook-form'
 import { Combobox } from '../../components/Combobox'
 import { TagInput } from '../../components/TagInput'
-import { Card, ChipGroup, Field, Input, Segmented, Select } from '../../components/ui'
+import { Card, Field, Input, Segmented, Select } from '../../components/ui'
 import { api } from '../../lib/api'
-import { PLATFORM_LABELS, WHERE_LABELS } from '../../lib/labels'
+import { WHERE_LABELS } from '../../lib/labels'
 import { errorAt, StrictnessToggle, toSiteDomain, useSpecForm } from './form-helpers'
+import { PlatformPicker } from './PlatformPicker'
 
 /** C2: cached SERP API locations for the chosen country. */
 const LocationField = ({ country }: { country: string | null }) => {
@@ -165,15 +165,7 @@ export const AdvancedFields = ({ country }: { country: string | null }) => {
                 control={control}
                 name="sources.platforms.value"
                 render={({ field }) => (
-                  <ChipGroup
-                    label="Platforms"
-                    value={field.value ?? []}
-                    onChange={field.onChange}
-                    options={PlatformSchema.options.map((v) => ({
-                      value: v,
-                      label: PLATFORM_LABELS[v],
-                    }))}
-                  />
+                  <PlatformPicker value={field.value ?? []} onChange={field.onChange} />
                 )}
               />
             )}
