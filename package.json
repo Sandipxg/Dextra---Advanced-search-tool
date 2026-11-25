@@ -12,7 +12,8 @@
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
     "check": "pnpm lint && pnpm typecheck && pnpm test",
-    "prepare": "lefthook install"
+    "prepare": "lefthook install",
+    "db:setup": "pnpm --filter @dextra/api migrate:auth && pnpm --filter @dextra/db db up && pnpm --filter @dextra/db seed"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.6.9",

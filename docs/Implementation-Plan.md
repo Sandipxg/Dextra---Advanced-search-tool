@@ -135,6 +135,8 @@ This is the safety boundary; build it **before** the LLM.
 
 ## Phase 7 — API + persistence (2 days)
 
+> 🟡 Code done 2026-11-25 on `feat/phase7-api-db` (D-022); first run against a real database is T-014. Results tables move to Phase 8.
+
 - Better Auth (email/password + GitHub OAuth) in `apps/api`.
 - Orchid ORM tables: `users` (Better Auth), `runs` (spec JSON, status, user, created), `planned_queries`, `serp_results` (raw), `results` (deduped URL, score, group, reasons), `authorizations` (engagement link, confirmed_at, user — audit log), `template_stats` (for T-011), `serp_locations` cache (T-008).
 - Endpoints:
