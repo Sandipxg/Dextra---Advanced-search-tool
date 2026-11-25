@@ -1,5 +1,5 @@
 import type { Selection } from '../compiler/selection'
-import { CONTENT_TYPE_EXTENSIONS } from '../schema/content-types'
+import { CONTENT_TYPE_EXTENSIONS, type ContentType } from '../schema/content-types'
 import type { IntakeSpec } from '../schema/intake-spec'
 import { isSecurityRun } from '../schema/intake-spec'
 import {
@@ -65,26 +65,62 @@ export const OPT_IN_WORDS: Partial<Record<TemplateId, readonly string[]>> = {
   ],
   doc_data_files: ['data', 'dataset', 'csv', 'json', 'spreadsheet', 'excel', 'statistic', 'xml'],
   tech_stack_in_jobs: ['job', 'hiring', 'career', 'vacanc', 'recruit'],
+  // Raw media files are rarely indexed: only when the request asks for files (D-028).
   doc_media_files: [
-    'image',
-    'photo',
-    'picture',
-    'logo',
-    'video',
-    'audio',
-    'music',
-    'song',
-    'podcast',
-    'recording',
-    'media',
+    'mp4',
+    'mkv',
+    'webm',
+    'mp3',
+    'wav',
+    'flac',
+    'm4a',
+    'jpg',
+    'jpeg',
+    'png',
+    'gif',
+    'svg',
+    'download',
+    'media file',
+    'raw file',
   ],
 }
 
 /** Opt-in templates that exist for a file type: a matching content-type tick opts them in. */
-const OPT_IN_BY_CONTENT: ReadonlySet<TemplateId> = new Set<TemplateId>([
-  'doc_data_files',
-  'doc_media_files',
-])
+const OPT_IN_BY_CONTENT: ReadonlySet<TemplateId> = new Set<TemplateId>(['doc_data_files'])
+
+/**
+ * Media templates (D-028): run for any goal when their content type is ticked or the
+ * request mentions one of the words.
+ */
+export const MEDIA_TEMPLATES: Partial<
+  Record<TemplateId, { content: ContentType; words: readonly string[] }>
+> = {
+  doc_video_results: {
+    content: 'video',
+    words: ['video', 'movie', 'film', 'trailer', 'episode', 'clip', 'documentary', 'webinar'],
+  },
+  doc_image_results: {
+    content: 'image',
+    words: [
+      'image',
+      'photo',
+      'picture',
+      'logo',
+      'wallpaper',
+      'poster',
+      'screenshot',
+      'infographic',
+    ],
+  },
+  doc_audio_sites: {
+    content: 'audio',
+    words: ['audio', 'song', 'music', 'podcast', 'album', 'soundtrack', 'audiobook'],
+  },
+}
+
+/** `filetype:` values written into a template's query (not from an `{ext}` param). */
+const fixedFiletypes = (t: Template): string[] =>
+  [...t.query.matchAll(/filetype:([a-z0-9]+)/gi)].map((m) => (m[1] ?? '').toLowerCase())
 
 /** Everything the user wrote about what they want, lowercased. */
 const requestText = (spec: IntakeSpec): string =>
@@ -123,8 +159,8 @@ const pickParams = (
   for (const [key, allowed] of Object.entries(paramValuesFor(t, spec.filters.country.value))) {
     let values = allowed
     if (key === 'ext') {
-      if (contentExts.size && t.goal === 'documents') {
-        // A document template that can't produce the requested content types is skipped.
+      if (contentExts.size) {
+        // A file-type template that can't produce the requested content types is skipped.
         values = allowed.filter((v) => contentExts.has(v))
       }
     } else if (key === 'platform') {
@@ -163,7 +199,8 @@ const canSupply = (t: Template, spec: IntakeSpec): boolean => {
 /**
  * Deterministic selector: used when the LLM is unavailable, refuses, or returns nothing
  * usable, and in tests/CI. Goal templates by priority (opt-in ones only when the request
- * mentions them), plus platform templates for E3. Param values the request mentions win
+ * mentions them), media templates for ticked media types (any goal), plus platform
+ * templates for E3. Templates that can't produce the ticked content types are skipped. Param values the request mentions win
  * over the defaults.
  */
 export const ruleBasedSelections = (spec: IntakeSpec): Selection[] => {
@@ -173,7 +210,10 @@ export const ruleBasedSelections = (spec: IntakeSpec): Selection[] => {
   const contentExts = new Set(spec.filters.content.value.flatMap((c) => CONTENT_TYPE_EXTENSIONS[c]))
   // Opt-in templates run when the request mentions them; file-type templates also run when
   // a ticked content type matches their file types (e.g. Audio → doc_media_files).
+  const ticked = new Set(spec.filters.content.value)
   const optedIn = (t: Template) => {
+    const media = MEDIA_TEMPLATES[t.id as TemplateId]
+    if (media) return ticked.has(media.content) || media.words.some((w) => mentions(text, w))
     const words = OPT_IN_WORDS[t.id as TemplateId]
     if (!words) return true
     if (words.some((w) => mentions(text, w))) return true
@@ -182,12 +222,20 @@ export const ruleBasedSelections = (spec: IntakeSpec): Selection[] => {
       (t.params.ext ?? []).some((e) => contentExts.has(e))
     )
   }
+  // A query that hard-codes a file type (e.g. filetype:pdf) can't serve other ticked types.
+  const fitsContent = (t: Template) => {
+    const fixed = fixedFiletypes(t)
+    return !contentExts.size || !fixed.length || fixed.some((e) => contentExts.has(e))
+  }
   const allowed = (t: Template) =>
-    (security || t.sensitivity !== 'security') && canSupply(t, spec) && optedIn(t)
+    (security || t.sensitivity !== 'security') && canSupply(t, spec) && optedIn(t) && fitsContent(t)
 
   const goal = templatesForGoal(spec.goal)
     .filter(allowed)
     .sort((a, b) => a.priority - b.priority)
+  const media = approvedTemplates().filter(
+    (t) => MEDIA_TEMPLATES[t.id as TemplateId] && t.goal !== spec.goal && allowed(t),
+  )
   const platform = sites.size
     ? approvedTemplates().filter(
         (t) =>
@@ -198,7 +246,8 @@ export const ruleBasedSelections = (spec: IntakeSpec): Selection[] => {
       )
     : []
 
-  return [...goal, ...platform].flatMap((t) => {
+  const unique = [...new Map([...goal, ...media, ...platform].map((t) => [t.id, t])).values()]
+  return unique.flatMap((t) => {
     const picked = pickParams(t, spec, sites, text)
     if (!picked) return []
     const reason = picked.matched.length
