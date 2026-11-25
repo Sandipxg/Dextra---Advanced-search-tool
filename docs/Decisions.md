@@ -1,5 +1,19 @@
 # Decisions
 
+## D-021 — Template selector: Claude with a deterministic fallback
+
+- **Date:** 2026-11-25
+- **Status:** Accepted
+- **Context:** T-005. The selector must only pick enum ids/values (D-002) and a run must not depend on the LLM being available.
+- **Decision:**
+  - `@dextra/selector` calls **Claude Opus 5.5** (`claude-opus-5-5`, overridable) with **structured outputs** (`messages.parse` + `zodOutputFormat(SelectorOutputSchema)`), **effort `low`** (picking from enums is a simple task) and `max_tokens` 16000.
+  - Prompt: a static system prompt with the rules and the whole approved catalogue (one JSON line per template), marked for prompt caching; the validated spec plus run facts (budget, security run, country, keywords missing) go in the user message. The spec is labelled as user data.
+  - Output schema avoids free-form records (params are name/values pairs) and only allows template ids from the library. Every pick is re-checked with `validateSelection` (invalid ones dropped with a note), then again by `buildPlan`.
+  - **Fallback:** on a refusal, an API error (auth, rate limit, connection, other status), no API key, or no valid picks, the **rule-based selector** runs instead (goal templates by priority, params from the content filter / E3 platforms / first values). Unusable output (no parse, `max_tokens`) is retried once first. Programming errors still throw. Chosen over the API's server-side model fallback because security-recon specs can trip safety classifiers, and the rule selector gives a predictable result at no cost.
+  - **Exclusions** from A5 come back as proposals only; `applyExclusions` merges them after the user confirms (invalid or target domains skipped).
+  - **Engine router** (`routeEngines`): advanced override replaces everything; otherwise Google plus notes; an LLM engine suggestion is recorded but only used if that engine is enabled (none are yet, D-015).
+- **Consequences:** The LLM path is tested with a fake client only; a live run needs `ANTHROPIC_API_KEY` (T-005b).
+
 ## D-020 — Query compiler rules
 
 - **Date:** 2026-11-25

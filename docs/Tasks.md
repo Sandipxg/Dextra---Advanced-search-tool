@@ -8,8 +8,8 @@ _None_
 
 ## 🔜 Up next
 
+- [ ] T-005b Live selector run with an `ANTHROPIC_API_KEY` (`pnpm --filter @dextra/selector try`); compare LLM picks with rule picks on a few specs
 - [ ] T-001b Re-run the operator matrix with Serper and Brave keys; decide whether to enable them (D-015)
-- [ ] T-005 Template selector: LLM tool call with enum template IDs + Zod-validated output
 
 ## 🧊 Backlog
 
@@ -26,6 +26,7 @@ _None_
 
 ## ✅ Done (recent)
 
+- [x] T-005 Template selector: Claude structured output + rule-based fallback, engine router, exclusion proposals (D-021) (2026-11-25)
 - [x] T-006 Query compiler (`buildPlan`) + query guard + result guard; selection validation; budget, cross-goal cap, Soft fallback / F4 outside batches (D-020) (2026-11-25)
 - [x] T-004b `TemplateSchema` + library rules, Markdown → generated module, `TemplateIdSchema`; DB seed moves to Phase 7 (D-019) (2026-11-25)
 - [x] T-003 Intake spec Zod schema `IntakeSpecSchema` + validators + generated ISO lists, 49 tests (D-018) (2026-11-25)

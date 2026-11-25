@@ -122,6 +122,8 @@ This is the safety boundary; build it **before** the LLM.
 
 ## Phase 6 — Template selector + engine router (T-005, 2 days)
 
+> ✅ Done 2026-11-25 on `feat/t-005-selector` (D-021). Live LLM check pending a key (T-005b).
+
 - **Engine router (code first, D-004):** Google default → per-template fallback to next capable engine → goal defaults (news → News endpoint, academic → Scholar, third-party mentions → +Bing) → accept at most one LLM-suggested engine with a reason → E1 override replaces all in advanced mode.
 - **LLM call:** one tool `select_templates` whose input schema is generated from Zod (`zod-to-json-schema`): `{ selections: [{ templateId: enum, params: {...enum}, reason }], extraEngine?: {engine, reason}, exclusions: { terms[], sites[] }, followUpQuestion?: string }`.
   - Prompt gets only the validated spec + the template catalogue (id, goal, signal, params). No free-form query field exists in the schema.
