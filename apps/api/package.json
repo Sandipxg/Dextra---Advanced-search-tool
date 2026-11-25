@@ -8,13 +8,15 @@
     "start": "tsx src/server.ts",
     "typecheck": "tsc -p tsconfig.json",
     "test": "vitest run",
-    "migrate:auth": "tsx src/migrate-auth.ts"
+    "migrate:auth": "tsx src/migrate-auth.ts",
+    "try-run": "tsx scripts/try-run.ts"
   },
   "dependencies": {
     "@dextra/core": "workspace:*",
     "@dextra/db": "workspace:*",
     "@dextra/env": "workspace:*",
     "@dextra/selector": "workspace:*",
+    "@dextra/serp": "workspace:*",
     "@hono/node-server": "^2.1.11",
     "better-auth": "^1.7.28",
     "hono": "^4.13.22",

@@ -1,11 +1,13 @@
 import { orchidORM } from 'orchid-orm/node-postgres'
 import { AuthorizationTable } from './tables/authorization'
+import { ResultTable } from './tables/result'
 import { RunTable } from './tables/run'
 import { SerpLocationTable } from './tables/serp-location'
 import { TemplateStatTable, TemplateTable } from './tables/template'
 
 export const tables = {
   run: RunTable,
+  result: ResultTable,
   authorization: AuthorizationTable,
   template: TemplateTable,
   templateStat: TemplateStatTable,

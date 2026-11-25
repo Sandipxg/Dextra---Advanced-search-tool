@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto'
 import { resolve } from 'node:path'
-import { ruleBasedSelections } from '@dextra/core'
+import { ruleBasedSelections, type SearchFn } from '@dextra/core'
 import { createDb, type Db } from '@dextra/db'
 import pino from 'pino'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
@@ -18,6 +18,14 @@ const ORIGIN = 'http://localhost:5173'
 describe.skipIf(!url)('API (needs DATABASE_TEST_URL)', () => {
   let db: Db
   let app: ReturnType<typeof createApp>
+  /** Background runs started by confirm; tests await them. */
+  const tasks: Promise<void>[] = []
+  /** Fake SERP: in-scope PDFs plus one off-scope page the engine "ignored scope" on. */
+  const search: SearchFn = async (query) => [
+    { url: 'https://target.com/report.pdf', title: 'Annual report', snippet: 'x', position: 1 },
+    { url: 'https://docs.target.com/deck.pdf', title: 'Deck', snippet: '=cmd', position: 2 },
+    { url: 'https://wired.com/story', title: 'Story', snippet: query.key, position: 3 },
+  ]
 
   beforeAll(() => {
     db = createDb(url as string)
@@ -38,6 +46,10 @@ describe.skipIf(!url)('API (needs DATABASE_TEST_URL)', () => {
         followUpQuestion: null,
         notes: ['test selector'],
       }),
+      search,
+      background: (task) => {
+        tasks.push(task)
+      },
       webOrigin: ORIGIN,
       logger: pino({ level: 'silent' }),
       planLimit: { max: 5, windowMs: 60_000 },
@@ -149,7 +161,7 @@ describe.skipIf(!url)('API (needs DATABASE_TEST_URL)', () => {
         exclusions: { terms: ['careers'], sites: ['pinterest.com', 'target.com'] },
       }),
     })
-    expect(res.status).toBe(200)
+    expect(res.status).toBe(202)
     const confirmed = (await res.json()) as {
       run: { status: string; plan: { queries: { q: string }[] } }
       skippedExclusions: string[]
@@ -181,7 +193,7 @@ describe.skipIf(!url)('API (needs DATABASE_TEST_URL)', () => {
       body: '{}',
       headers: { 'x-forwarded-for': '203.0.113.7, 10.0.0.1' },
     })
-    expect(res.status).toBe(200)
+    expect(res.status).toBe(202)
     const audit = await db.authorization.where({ runId: body.run.id }).take()
     expect(audit).toMatchObject({
       useCase: 'bug_bounty',
@@ -214,5 +226,94 @@ describe.skipIf(!url)('API (needs DATABASE_TEST_URL)', () => {
     const { locations } = (await res.json()) as { locations: { id: number }[] }
     expect(locations.map((l) => l.id)).toEqual([id])
     expect((await call('/api/locations?country=xx', { cookie })).status).toBe(422)
+  })
+
+  it('runs a confirmed plan in the background and serves grouped results and exports', async () => {
+    const cookie = await signUp()
+    const { body } = await plan(cookie)
+    const id = body.run.id
+    tasks.length = 0
+    await call(`/api/runs/${id}/confirm`, { method: 'POST', cookie, body: '{}' })
+    expect(tasks).toHaveLength(1)
+    await Promise.all(tasks)
+
+    const run = (await (await call(`/api/runs/${id}`, { cookie })).json()) as {
+      run: { status: string; stats: { requests: number; main: number; outside: number } }
+    }
+    expect(run.run.status).toBe('done')
+    expect(run.run.stats.main).toBe(2)
+    expect(run.run.stats.outside).toBe(1)
+    expect(run.run.stats.requests).toBeGreaterThan(0)
+
+    const main = (await (await call(`/api/runs/${id}/results?group=main`, { cookie })).json()) as {
+      results: { url: string; group: string }[]
+    }
+    expect(main.results.map((r) => r.url)).toEqual([
+      'https://target.com/report.pdf',
+      'https://docs.target.com/deck.pdf',
+    ])
+    const outside = (await (
+      await call(`/api/runs/${id}/results?group=outside`, { cookie })
+    ).json()) as {
+      results: { url: string; reasons: string[] }[]
+    }
+    expect(outside.results[0]).toMatchObject({ url: 'https://wired.com/story' })
+
+    const csv = await call(`/api/runs/${id}/export?format=csv`, { cookie })
+    expect(csv.headers.get('content-type')).toContain('text/csv')
+    const text = await csv.text()
+    expect(text).toContain('https://target.com/report.pdf')
+    expect(text).toContain("'=cmd") // formula neutralised
+    const json = await call(`/api/runs/${id}/export?format=json`, { cookie })
+    expect(((await json.json()) as { results: unknown[] }).results).toHaveLength(3)
+
+    const stats = await db.templateStat.where({ goal: 'documents' }).take()
+    expect(stats.queries).toBeGreaterThan(0)
+  })
+
+  it('marks a run failed when every search fails, without leaking details', async () => {
+    const failing = createApp({
+      db,
+      auth: createAuth({
+        databaseUrl: url as string,
+        secret: 'test-secret-that-is-long-enough-000000',
+        baseURL: 'http://localhost:3000',
+        webOrigin: ORIGIN,
+      }),
+      select: async (spec) => ({
+        source: 'rules',
+        selections: ruleBasedSelections(spec),
+        extraEngine: null,
+        exclusions: { terms: [], sites: [] },
+        followUpQuestion: null,
+        notes: [],
+      }),
+      search: async () => {
+        throw new Error('[serpapi] HTTP 401: invalid api_key=secret')
+      },
+      background: (task) => {
+        tasks.push(task)
+      },
+      webOrigin: ORIGIN,
+      logger: pino({ level: 'silent' }),
+    })
+    const cookie = await signUp()
+    const planned = await failing.request('/api/plans', {
+      method: 'POST',
+      headers: { origin: ORIGIN, cookie, 'content-type': 'application/json' },
+      body: JSON.stringify(docsSpec),
+    })
+    const { run } = (await planned.json()) as { run: { id: string } }
+    tasks.length = 0
+    await failing.request(`/api/runs/${run.id}/confirm`, {
+      method: 'POST',
+      headers: { origin: ORIGIN, cookie, 'content-type': 'application/json' },
+      body: '{}',
+    })
+    await Promise.all(tasks)
+    const row = await db.run.find(run.id)
+    expect(row.status).toBe('failed')
+    expect(row.error).toBe('The search could not be completed. Try again later.')
+    expect((await call(`/api/runs/${run.id}/export?format=csv`, { cookie })).status).toBe(409)
   })
 })

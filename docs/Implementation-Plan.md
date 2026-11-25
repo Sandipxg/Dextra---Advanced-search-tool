@@ -149,6 +149,8 @@ This is the safety boundary; build it **before** the LLM.
 
 ## Phase 8 — Runner, scorer, report (T-009, T-010, 2 days)
 
+> ✅ Done 2026-11-25 on `feat/phase8-runner-scorer` (D-023). Live check with SerpAPI is T-015.
+
 - Runner: concurrency-limited (p-limit), retries with backoff, per-run cost accumulator, stops at budget. Runs primary batch → checks F3 minimum → runs Soft fallback batches only if short → runs F4 batch if on.
 - Scorer: URL normalisation (scheme, `www.`, trailing slash, tracking params) → dedupe → score = number of distinct queries/templates that surfaced it + rank position + Open-filter matches + E5 source preference. B6 "already have" URLs removed or flagged "new only".
 - Grouping: main list vs "Outside scope" with reason labels ("Outside your location", "Outside your time range"); security runs list related assets as "unverified, not in scope" and never query them.

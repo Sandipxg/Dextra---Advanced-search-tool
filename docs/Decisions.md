@@ -1,5 +1,20 @@
 # Decisions
 
+## D-023 — Runner, scoring and report
+
+- **Date:** 2026-11-25
+- **Status:** Accepted
+- **Context:** Phase 8 (T-009, T-010).
+- **Decision:**
+  - **Runner** (`runPlan`, pure, search function injected): primary + outside batches first, max 4 requests in parallel; then the Soft fallback batch only if primary queries returned fewer _in-scope_ results than F3 (results the engine returned off-scope don't count). Pages of 10, stopping at the first short page. A failing query is recorded and skipped; a run fails only if every executed query failed.
+  - **Dedupe key:** URL without scheme, `www.`, default port, fragment, tracking params (`utm_*`, `gclid`, `fbclid`, ...) or trailing slash; params sorted.
+  - **Groups:** `main` = in scope from a primary query (or a widened query whose only widened filter was scope and the host is in scope anyway); `outside` = found only by widened queries, labelled with what was widened, or off-scope results on Soft runs labelled "The search engine ignored your domain filter"; `unverified` = off-scope results on security runs (listed, never searched further). Hard runs drop off-scope results. B3/E4 hosts and B6 known URLs are removed. A result found in several groups keeps the best one.
+  - **Score:** 10 per distinct query that found it + 10/position per hit + signal (+5 match, -5 miss, D-016) + bonuses: D3 terms in title/snippet (+2 each, max 6), Open content type (+3), Open scope host (+4), E5 official (+4 for scope or gov/edu hosts) or community (+4 for forum hosts).
+  - **Storage:** only deduped, scored results (`result` table) and run stats; raw SERP responses are not kept. Per-template counts go to `template_stat`.
+  - **Execution:** confirming a run (202) starts it in the background in the API process; the client polls `GET /api/runs/:id`. Failures store a generic message; details go to the logs only.
+  - **Exports:** `GET /api/runs/:id/results?group=` (paged) and `/export?format=csv|json`. CSV cells starting with `= + - @` get a leading `'` (CSV injection), since titles and snippets come from arbitrary pages.
+- **Consequences:** A job queue (BullMQ) replaces the in-process background task when the API runs on more than one instance.
+
 ## D-022 — API and persistence layout
 
 - **Date:** 2026-11-25

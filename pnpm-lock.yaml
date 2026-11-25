@@ -44,6 +44,9 @@ importers:
       '@dextra/selector':
         specifier: workspace:*
         version: link:../../packages/selector
+      '@dextra/serp':
+        specifier: workspace:*
+        version: link:../../packages/serp
       '@hono/node-server':
         specifier: ^2.1.11
         version: 2.1.11(hono@4.13.22)

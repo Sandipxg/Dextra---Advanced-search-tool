@@ -11,6 +11,15 @@ export const RUN_STATUSES = [
 ] as const
 export type RunStatus = (typeof RUN_STATUSES)[number]
 
+export interface RunStats {
+  requests: number
+  fallbackRan: boolean
+  errors: Array<{ queryKey: string; message: string }>
+  main: number
+  outside: number
+  unverified: number
+}
+
 /** One search request: the validated spec, the selector's picks and the compiled plan. */
 export const RunTable = defineTable('run', (t) => ({
   id: t.uuid().primaryKey(),
@@ -26,5 +35,11 @@ export const RunTable = defineTable('run', (t) => ({
   proposedExclusions: t.json<ProposedExclusions>(),
   followUpQuestion: t.text().nullable(),
   confirmedAt: t.timestamp().nullable(),
+  startedAt: t.timestamp().nullable(),
+  finishedAt: t.timestamp().nullable(),
+  /** Requests, fallback, per-query errors and group counts once the run finishes. */
+  stats: t.json<RunStats>().nullable(),
+  /** User-facing failure message; details go to the logs. */
+  error: t.text().nullable(),
   ...t.timestamps(),
 }))

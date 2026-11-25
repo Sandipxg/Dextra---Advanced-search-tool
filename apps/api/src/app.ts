@@ -6,8 +6,11 @@ import {
   IntakeSpecSchema,
   isSecurityRun,
   routeEngines,
+  type ScoredResult,
+  type SearchFn,
+  toCsv,
 } from '@dextra/core'
-import type { Db, RunRow } from '@dextra/db'
+import type { Db, ResultRow, RunRow } from '@dextra/db'
 import type { SelectorResult } from '@dextra/selector'
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
@@ -16,16 +19,24 @@ import { HTTPException } from 'hono/http-exception'
 import type { Logger } from 'pino'
 import { z } from 'zod'
 import type { Auth } from './auth'
+import { executeRun } from './execute'
 import { createRateLimiter } from './rate-limit'
 
 export interface AppDeps {
   db: Db
   auth: Auth
   select: (spec: IntakeSpec) => Promise<SelectorResult>
+  /** SERP search for the runner (`createSearch(providers)` in production). */
+  search: SearchFn
   webOrigin: string
   logger: Logger
   /** Plans cost an LLM call; defaults to 30 per user per hour. */
   planLimit?: { max: number; windowMs: number }
+  /**
+   * Starts a run in the background. Default: fire and forget in this process (one API
+   * instance; a job queue when there are more). Tests pass one that keeps the promise.
+   */
+  background?: (task: Promise<void>) => void
 }
 
 type User = { id: string; email: string }
@@ -55,7 +66,36 @@ const toSummary = (run: RunRow) => ({
   followUpQuestion: run.followUpQuestion,
   createdAt: run.createdAt,
   confirmedAt: run.confirmedAt,
+  startedAt: run.startedAt,
+  finishedAt: run.finishedAt,
+  stats: run.stats,
+  error: run.error,
 })
+
+/** Stored row → the shape the report helpers use. */
+const toScored = (r: ResultRow): ScoredResult => ({
+  url: r.url,
+  key: r.key,
+  title: r.title,
+  snippet: r.snippet,
+  ...(r.date ? { date: r.date } : {}),
+  ...(r.source ? { source: r.source } : {}),
+  group: r.group as ScoredResult['group'],
+  reasons: r.reasons,
+  score: Number(r.score),
+  bestPosition: r.bestPosition,
+  queryKeys: r.queryKeys,
+  templateIds: r.templateIds,
+  goal: r.goal,
+  signal: r.signal as ScoredResult['signal'],
+})
+
+const ResultsQuerySchema = z.object({
+  group: z.enum(['main', 'outside', 'unverified']).optional(),
+  limit: z.coerce.number().int().min(1).max(200).default(50),
+  offset: z.coerce.number().int().min(0).default(0),
+})
+const ExportQuerySchema = z.object({ format: z.enum(['csv', 'json']) })
 
 const ConfirmSchema = z.strictObject({
   exclusions: z
@@ -75,6 +115,11 @@ export const createApp = (deps: AppDeps) => {
   const { db, auth, logger } = deps
   const limit = deps.planLimit ?? { max: 30, windowMs: 60 * 60 * 1000 }
   const planLimiter = createRateLimiter(limit.max, limit.windowMs)
+  const background =
+    deps.background ??
+    ((task: Promise<void>) => {
+      task.catch((err: unknown) => logger.error({ err }, 'background task failed'))
+    })
   const app = new Hono<Env>()
 
   // Request log: method, path, status, duration. Never bodies, cookies or headers.
@@ -188,7 +233,46 @@ export const createApp = (deps: AppDeps) => {
         .find(run.id)
         .update({ status: 'confirmed', spec, plan, confirmedAt })
     })
-    return c.json({ ok: true, run: toSummary(updated), skippedExclusions: skipped })
+    // Searches start after the response; the client polls GET /api/runs/:id.
+    background(executeRun({ db, search: deps.search, logger }, run.id))
+    return c.json({ ok: true, run: toSummary(updated), skippedExclusions: skipped }, 202)
+  })
+
+  /** Main / outside / unverified results, ranked, paged. */
+  app.get('/api/runs/:id/results', requireUser, async (c) => {
+    const run = await ownRun(c.get('user').id, c.req.param('id'))
+    const query = ResultsQuerySchema.safeParse(c.req.query())
+    if (!query.success) return c.json({ ok: false, issues: issuesOf(query.error) }, 422)
+    const { group, limit: take, offset } = query.data
+    let rows = db.result.selectAll().where({ runId: run.id })
+    if (group) rows = rows.where({ group })
+    const results = await rows.order({ rank: 'ASC' }).limit(take).offset(offset)
+    return c.json({
+      ok: true,
+      status: run.status,
+      stats: run.stats,
+      results: results.map(toScored),
+    })
+  })
+
+  /** F5 exports: every result of a finished run as CSV or JSON. */
+  app.get('/api/runs/:id/export', requireUser, async (c) => {
+    const run = await ownRun(c.get('user').id, c.req.param('id'))
+    const query = ExportQuerySchema.safeParse(c.req.query())
+    if (!query.success) return c.json({ ok: false, issues: issuesOf(query.error) }, 422)
+    if (run.status !== 'done') return c.json({ ok: false, error: `Run is ${run.status}` }, 409)
+    const results = (
+      await db.result.selectAll().where({ runId: run.id }).order({ rank: 'ASC' })
+    ).map(toScored)
+    const name = `dextra-${run.id.slice(0, 8)}`
+    if (query.data.format === 'csv') {
+      return c.body(toCsv(results), 200, {
+        'Content-Type': 'text/csv; charset=utf-8',
+        'Content-Disposition': `attachment; filename="${name}.csv"`,
+      })
+    }
+    c.header('Content-Disposition', `attachment; filename="${name}.json"`)
+    return c.json({ run: toSummary(run), results })
   })
 
   app.get('/api/runs/:id', requireUser, async (c) => {
