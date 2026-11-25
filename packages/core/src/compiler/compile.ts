@@ -1,5 +1,5 @@
 import { checkQuery } from '../guardrails/query-guard'
-import { CONTENT_TYPE_EXTENSIONS } from '../schema/content-types'
+import { filetypeLayerExtensions } from '../schema/content-types'
 import {
   DEPTH_BUDGET,
   ENABLED_ENGINES,
@@ -233,7 +233,7 @@ const compileTemplate = (
     contentFilter.mode !== 'open' &&
     contentFilter.value.length > 0 &&
     !contentFilter.value.includes('web')
-      ? [...new Set(contentFilter.value.flatMap((c) => CONTENT_TYPE_EXTENSIONS[c]))]
+      ? filetypeLayerExtensions(contentFilter.value)
       : []
   const content = orGroup(contentExts.map((e) => `filetype:${e}`))
   if (content && contentFilter.mode === 'soft') soft.push('content')

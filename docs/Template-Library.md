@@ -1,6 +1,6 @@
 # Dork Template Library
 
-_Status: **v1.2 — 38 templates, content approved, engines verified for Google** (media filetypes untested, [D-027](./Decisions.md#d-027)) (Bing/Brave pending, see [D-015](./Decisions.md#d-015)) · Last updated: 2026-11-25 · Task: T-004 · Decisions: [D-007 – D-013, D-015 – D-017](./Decisions.md)_
+_Status: **v1.3 — 41 templates, content approved, engines verified for Google** (media filetypes untested, [D-027](./Decisions.md#d-027); media pages [D-028](./Decisions.md#d-028)) (Bing/Brave pending, see [D-015](./Decisions.md#d-015)) · Last updated: 2026-11-25 · Task: T-004 · Decisions: [D-007 – D-013, D-015 – D-017](./Decisions.md)_
 
 The LLM never writes a dork. It picks template `id`s from this file and picks values for each template's **params** from the listed enums. Code fills the **vars** from the intake spec, adds the scope/exclusion/keyword layers, translates operators per engine, and runs the guardrails. The YAML blocks below are the source of truth: `pnpm --filter @dextra/core gen:templates` validates them against `TemplateSchema` and writes `packages/core/src/templates/library.generated.ts`; a test fails if that file is stale. The DB seed (Phase 7) uses the same parser ([D-019](./Decisions.md#d-019)).
 
@@ -100,6 +100,9 @@ The LLM picks from the primary goal's templates first. It may also pick template
 | 3   | doc_report_kind      | documents            | 2        | normal      |
 | 4   | doc_data_files       | documents            | 3        | normal      |
 | 4b  | doc_media_files      | documents            | 3        | normal      |
+| 4c  | doc_video_pages      | documents            | 1        | normal      |
+| 4d  | doc_image_pages      | documents            | 1        | normal      |
+| 4e  | doc_audio_sites      | documents            | 1        | normal      |
 | 5   | exp_dir_listing      | exposed_pages        | 1        | security    |
 | 6   | exp_config_files     | exposed_pages        | 1        | security    |
 | 7   | exp_backup_log_files | exposed_pages        | 2        | security    |
@@ -236,7 +239,7 @@ example: "site:data.gov.in filetype:csv"
 ```yaml
 id: doc_media_files
 goal: documents
-title: Images, video and audio files
+title: Raw image, video and audio files
 query: "filetype:{ext}"
 params:
   ext: [jpg, jpeg, png, gif, webp, svg, mp4, webm, mov, avi, mkv, mp3, wav, m4a, ogg, flac]
@@ -250,8 +253,101 @@ signal: media file served at its own URL
 priority: 3
 sensitivity: normal
 status: approved
-notes: Google indexes far fewer media files than documents; untested in the operator matrix (D-027)
+notes: Google indexes very few raw media files, so this only runs when the request asks for files by extension or "download" (D-028); untested in the operator matrix (D-027)
 example: "site:nasa.gov (filetype:mp4 OR filetype:mp3)"
+```
+
+```yaml
+id: doc_video_pages
+goal: documents
+title: Video pages
+query: "{keywords}"
+params:
+  platform:
+    [
+      youtube.com,
+      vimeo.com,
+      dailymotion.com,
+      facebook.com,
+      hotstar.com,
+      netflix.com,
+      primevideo.com,
+      archive.org,
+    ]
+max_pick: 8
+combine: or
+vars: [keywords]
+scope_mode: platform
+engines: [google]
+result_type: web
+signal: watch or title page on a video site
+priority: 1
+sensitivity: normal
+status: approved
+notes: Runs when Video is ticked or the request mentions videos, movies, trailers and the like; ordinary web results, not Google's Videos tab (D-028)
+example: "(site:youtube.com OR site:hotstar.com) shiddat movie"
+```
+
+```yaml
+id: doc_image_pages
+goal: documents
+title: Image pages
+query: "{keywords}"
+params:
+  platform:
+    [
+      pinterest.com,
+      flickr.com,
+      commons.wikimedia.org,
+      unsplash.com,
+      pexels.com,
+      shutterstock.com,
+      gettyimages.com,
+      instagram.com,
+    ]
+max_pick: 8
+combine: or
+vars: [keywords]
+scope_mode: platform
+engines: [google]
+result_type: web
+signal: photo or gallery page on an image site
+priority: 1
+sensitivity: normal
+status: approved
+notes: Runs when Images is ticked or the request mentions images, photos, logos and the like; ordinary web results, not Google's Images tab (D-028)
+example: "(site:flickr.com OR site:commons.wikimedia.org) infosys logo"
+```
+
+```yaml
+id: doc_audio_sites
+goal: documents
+title: Music, podcasts and audio
+query: "{keywords}"
+params:
+  platform:
+    [
+      open.spotify.com,
+      soundcloud.com,
+      music.apple.com,
+      podcasts.apple.com,
+      jiosaavn.com,
+      gaana.com,
+      audiomack.com,
+      archive.org,
+    ]
+max_pick: 8
+combine: or
+vars: [keywords]
+scope_mode: platform
+engines: [google]
+result_type: web
+signal: track, album, episode or recording page on an audio site
+priority: 1
+sensitivity: normal
+status: approved
+notes: Runs when Audio is ticked or the request mentions songs, music, podcasts and the like; Google has no audio tab (D-028)
+example: "(site:open.spotify.com OR site:soundcloud.com) shiddat song"
 ```
 
 ### Exposed pages (`exposed_pages`) — security, authorization required

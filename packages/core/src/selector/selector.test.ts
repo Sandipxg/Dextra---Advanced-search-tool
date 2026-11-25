@@ -155,19 +155,67 @@ describe('platforms and media (D-027)', () => {
     expect(picks.map((p) => p.templateId)).not.toContain('tp_code_mentions')
   })
 
-  it('picks media files for an Audio tick or media words, not for ordinary document searches', () => {
-    const audio = ruleBasedSelections(spec({ filters: { content: { value: ['audio'] } } }))
-    expect(audio.find((p) => p.templateId === 'doc_media_files')?.params.ext).toEqual([
-      'mp3',
-      'wav',
-      'm4a',
-      'ogg',
-      'flac',
-    ])
-    const words = ruleBasedSelections(spec({ description: 'Product videos and podcast episodes' }))
-    expect(words.map((p) => p.templateId)).toContain('doc_media_files')
+  it('picks raw media files only when the request asks for files', () => {
+    const files = ruleBasedSelections(spec({ description: 'Download the mp3 recordings' }))
+    expect(files.map((p) => p.templateId)).toContain('doc_media_files')
     const plain = ruleBasedSelections(spec({ filters: { content: { value: ['pdf'] } } }))
     expect(plain.map((p) => p.templateId)).not.toContain('doc_media_files')
+  })
+})
+
+describe('media searches (D-028)', () => {
+  const ids = (input: Partial<IntakeSpecInput>) =>
+    ruleBasedSelections(spec(input)).map((p) => p.templateId)
+
+  it('searches video sites and plain web pages for a Video tick (reported case)', () => {
+    const s = spec({
+      scope: { domains: [] },
+      keywords: { all: ['shiddat', 'movie'] },
+      filters: { content: { value: ['video'] } },
+    })
+    const picks = ruleBasedSelections(s)
+    expect(picks.map((p) => p.templateId)).toEqual(['doc_video_pages', 'gr_keywords'])
+    const plan = buildPlan(s, picks)
+    expect(plan.queries.every((q) => q.type === 'web')).toBe(true)
+    expect(plan.queries.map((q) => q.q)).toEqual([
+      '(site:youtube.com OR site:vimeo.com OR site:dailymotion.com OR site:facebook.com OR site:hotstar.com OR site:netflix.com OR site:primevideo.com OR site:archive.org) shiddat movie',
+      'shiddat movie',
+    ])
+  })
+
+  it('uses image and audio sites for their ticks, each with a plain web search', () => {
+    expect(
+      ids({ filters: { content: { value: ['image'] } }, keywords: { all: ['logo'] } }),
+    ).toEqual(['doc_image_pages', 'gr_keywords'])
+    const audio = ruleBasedSelections(
+      spec({ filters: { content: { value: ['audio'] } }, keywords: { all: ['shiddat'] } }),
+    )
+    expect(audio.map((p) => p.templateId)).toEqual(['doc_audio_sites', 'gr_keywords'])
+    expect(audio[0]?.params.platform).toContain('open.spotify.com')
+  })
+
+  it('adds media searches for other goals without a filetype: layer for media', () => {
+    const s = spec({
+      goal: 'general_research',
+      scope: { domains: [] },
+      keywords: { all: ['shiddat', 'movie'] },
+      filters: { content: { value: ['video'] } },
+    })
+    const picked = ruleBasedSelections(s).map((p) => p.templateId)
+    expect(picked).toContain('doc_video_pages')
+    expect(picked.filter((id) => id === 'gr_keywords')).toHaveLength(1)
+    expect(picked).not.toContain('gr_keywords_filetype')
+    const plan = buildPlan(s, ruleBasedSelections(s))
+    expect(plan.queries.some((q) => /filetype:/.test(q.q))).toBe(false)
+  })
+
+  it('opts in from media words and stays out of plain document searches', () => {
+    expect(ids({ keywords: { all: ['shiddat', 'trailer'] } })).toContain('doc_video_pages')
+    const pdf = ids({ filters: { content: { value: ['pdf'] } } })
+    expect(pdf).toContain('doc_report_kind')
+    for (const id of ['doc_video_pages', 'doc_image_pages', 'doc_audio_sites', 'gr_keywords']) {
+      expect(pdf).not.toContain(id)
+    }
   })
 })
 

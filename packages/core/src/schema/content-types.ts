@@ -32,3 +32,18 @@ export const CONTENT_TYPE_EXTENSIONS: Record<ContentType, readonly string[]> = {
   video: ['mp4', 'webm', 'mov', 'avi', 'mkv'],
   audio: ['mp3', 'wav', 'm4a', 'ogg', 'flac'],
 }
+
+/**
+ * Media types are served by media templates (Google's Videos / Images tabs, audio sites),
+ * not by a `filetype:` layer: Google indexes very few raw media files (D-028).
+ */
+export const MEDIA_CONTENT_TYPES: readonly ContentType[] = ['image', 'video', 'audio']
+
+/** Extensions for the compiler's `filetype:` content layer (media types left out, D-028). */
+export const filetypeLayerExtensions = (types: readonly ContentType[]): string[] => [
+  ...new Set(
+    types
+      .filter((t) => !MEDIA_CONTENT_TYPES.includes(t))
+      .flatMap((t) => CONTENT_TYPE_EXTENSIONS[t]),
+  ),
+]

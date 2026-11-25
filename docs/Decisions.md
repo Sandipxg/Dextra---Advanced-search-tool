@@ -1,5 +1,18 @@
 # Decisions
 
+## D-028 — Media searches are web-page searches on media sites
+
+- **Date:** 2026-11-25
+- **Status:** Accepted (refines D-027)
+- **Context:** User report: Documents + keywords "shiddat, movie" + Video returned one unrelated PDF. The run showed two causes: (1) `doc_report_kind` hard-codes `filetype:pdf` and was still picked, because only templates with an `ext` param were filtered by content type; (2) the only video query asked for raw `filetype:mp4 OR …` files, which Google barely indexes (0 results). With no Soft filter to drop, no fallback ran.
+- **Decision:**
+  - **Ordinary web results only.** Google's Videos and Images tabs were tried (they returned 20 relevant videos) but the user doesn't want results from them: the right result is often an ordinary page. So media ticks run web searches.
+  - **Library v1.3 (41 templates):** `doc_video_pages` (YouTube, Vimeo, Dailymotion, Facebook, Hotstar, Netflix, Prime Video, Internet Archive), `doc_image_pages` (Pinterest, Flickr, Wikimedia Commons, Unsplash, Pexels, Shutterstock, Getty Images, Instagram), `doc_audio_sites` (Spotify, SoundCloud, Apple Music/Podcasts, JioSaavn, Gaana, Audiomack, Internet Archive). They run for **any goal** when their type is ticked or the request mentions media words (video, movie, trailer…; image, photo, logo…; song, music, podcast…).
+  - **Plain web search alongside:** whenever a media template runs, `gr_keywords` (keywords only, no site or file filter) runs too, so pages like Wikipedia, reviews and streaming listings come through.
+  - **`doc_media_files`** (raw files) runs only when the request asks for files by extension or "download".
+  - **Content fit:** the rule selector skips templates whose query hard-codes a `filetype:` outside the ticked types, and filters `ext` params for every goal (not just documents). Media types never become a compiler `filetype:` layer.
+- **Consequences:** The reported search plans 2 queries (4 paid requests at 20 results per search). The LLM selector path doesn't apply the content-fit check yet (no API key to test it; T-022).
+
 ## D-027 — More platforms, "Select all", media content types
 
 - **Date:** 2026-11-25
