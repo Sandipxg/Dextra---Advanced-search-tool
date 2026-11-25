@@ -1,5 +1,18 @@
 # Decisions
 
+## D-028 — Media searches use Google's Videos and Images tabs
+
+- **Date:** 2026-11-25
+- **Status:** Accepted (refines D-027)
+- **Context:** User report: Documents + keywords "shiddat, movie" + Video returned one unrelated PDF. The run showed two causes: (1) `doc_report_kind` hard-codes `filetype:pdf` and was still picked, because only templates with an `ext` param were filtered by content type; (2) the only video query asked for raw `filetype:mp4 OR …` files, which Google barely indexes (0 results). With no Soft filter to drop, no fallback ran.
+- **Decision:**
+  - **New result types `videos` and `images`** (SerpAPI: `tbm=vid` / `engine=google_images`; Serper: `/videos` / `/images`). Images come 100 per page, so the adapter slices out the requested page of 10.
+  - **Library v1.3 (41 templates):** `doc_video_results` (Videos tab), `doc_image_results` (Images tab), `doc_audio_sites` (Spotify, SoundCloud, Apple Music/Podcasts, JioSaavn, Gaana, Audiomack, Internet Archive; Google has no audio tab). They run for **any goal** when their type is ticked or the request mentions media words (video, movie, trailer…; image, photo, logo…; song, music, podcast…).
+  - **`doc_media_files`** (raw files) now runs only when the request asks for files by extension or "download".
+  - **Content fit:** the rule selector skips templates whose query hard-codes a `filetype:` outside the ticked types, and filters `ext` params for every goal (not just documents). Media types never become a compiler `filetype:` layer.
+  - **Redirect links:** Google Videos returns some results as `google.com/goto?url=<opaque>`. The link works, but the real site is only in `displayed_link`, so it is stored as the result's `source` and the report shows "www.youtube.com (via Google)".
+- **Consequences:** The reported search now plans 1 query (2 paid requests) and returned 20 relevant videos. Redirect links can't be deduplicated against direct links or checked against a domain scope (their host is google.com). The LLM selector path doesn't apply the content-fit check yet (no API key to test it; T-005b).
+
 ## D-027 — More platforms, "Select all", media content types
 
 - **Date:** 2026-11-25

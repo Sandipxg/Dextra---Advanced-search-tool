@@ -22,8 +22,8 @@ describe('generated library', () => {
     expect(TEMPLATE_IDS).toEqual(fromDocs.filter((t) => t.status === 'approved').map((t) => t.id))
   })
 
-  it('has 38 templates covering every goal with a priority-1 template', () => {
-    expect(TEMPLATES).toHaveLength(38)
+  it('has 41 templates covering every goal with a priority-1 template', () => {
+    expect(TEMPLATES).toHaveLength(41)
     for (const goal of GOALS) {
       const forGoal = templatesForGoal(goal)
       expect(forGoal.length, goal).toBeGreaterThanOrEqual(3)

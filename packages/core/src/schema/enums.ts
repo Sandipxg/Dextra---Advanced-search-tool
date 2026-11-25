@@ -46,8 +46,9 @@ export const EngineSchema = z.enum(['google', 'bing', 'brave'])
 export type Engine = z.infer<typeof EngineSchema>
 export const ENABLED_ENGINES = ['google'] as const satisfies readonly Engine[]
 
-/** E2 result types. */
-export const ResultTypeSchema = z.enum(['web', 'news', 'scholar'])
+/** E2 result types. `videos` / `images` are Google's Videos and Images tabs (D-028). */
+export const ResultTypeSchema = z.enum(['web', 'news', 'scholar', 'videos', 'images'])
+export type ResultType = z.infer<typeof ResultTypeSchema>
 
 /** E3 outside platforms (D-027). Each maps to template platform values in `PLATFORM_SITES`. */
 export const PlatformSchema = z.enum([

@@ -26,6 +26,9 @@ const GROUP_HINTS: Record<Group, string> = {
 }
 
 /** Only http(s) links are rendered as links (results come from arbitrary pages). */
+/** Google Videos links some results through an opaque redirect (D-028). */
+const isGoogleRedirect = (url: string) => /^https:\/\/www\.google\.[a-z.]+\/goto\?/i.test(url)
+
 const safeHref = (url: string) => (/^https?:\/\//i.test(url) ? url : undefined)
 
 const hostOf = (url: string) => {
@@ -103,7 +106,9 @@ const ResultItem = ({
           ) : (
             <span className="font-medium">{r.title}</span>
           )}
-          <p className="truncate text-xs text-muted">{r.url}</p>
+          <p className="truncate text-xs text-muted">
+            {isGoogleRedirect(r.url) && r.source ? `${r.source} (via Google)` : r.url}
+          </p>
           {r.snippet && <p className="mt-1 text-sm">{r.snippet}</p>}
           <div className="mt-2 flex flex-wrap gap-1.5">
             {r.reasons.map((reason) => (

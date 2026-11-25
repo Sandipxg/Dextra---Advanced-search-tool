@@ -93,7 +93,7 @@ const SourcesSchema = z.object({
   engines: z
     .union([z.literal('auto'), uniqueList(EngineSchema, 3).pipe(z.array(EngineSchema).min(1))])
     .default('auto'),
-  /** E2 */ types: uniqueList(ResultTypeSchema, 3)
+  /** E2 */ types: uniqueList(ResultTypeSchema, ResultTypeSchema.options.length)
     .pipe(z.array(ResultTypeSchema).min(1))
     .default(['web']),
   /** E3 */ platforms: z

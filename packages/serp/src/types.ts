@@ -2,7 +2,7 @@
 export type Engine = 'google' | 'bing' | 'brave'
 
 /** SERP endpoint (E2). */
-export type ResultType = 'web' | 'news' | 'scholar'
+export type ResultType = 'web' | 'news' | 'scholar' | 'videos' | 'images'
 
 export type ProviderId = 'serper' | 'serpapi' | 'brave'
 
