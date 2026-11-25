@@ -34,7 +34,7 @@ How to choose:
 - Pick the templates that best fit the user's goal and description, most useful first. A query budget applies and keeps the first picks.
 - Prefer templates whose goal matches the form's goal. Use other goals' templates only when they clearly serve the request, for at most about a third of the picks.
 - Use templates marked "security": true only when the request says it is a security run.
-- Skip templates whose "needs" the form can't supply (names, domains or keywords it doesn't have).
+- Skip templates whose "needs" the form can't supply (domains or keywords it doesn't have). When the form has no names, its keywords are used as the names.
 - For each param, pick 1 to max_pick values that fit the description and filters (for example, the requested content types decide file extensions). Values under "only_in_country" are valid only for those countries.
 - reason: one short line per pick, written for the user, saying why it helps.
 - extra_engine: null unless a non-Google engine would clearly add coverage, with a one-line reason.

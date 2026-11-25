@@ -6,8 +6,8 @@
 import {
   applyExclusions,
   buildPlan,
+  IntakeFormSchema,
   type IntakeSpec,
-  IntakeSpecSchema,
   type PlannedQuery,
   type RawResult,
   routeEngines,
@@ -156,7 +156,7 @@ export const handlers = [
   http.post('*/api/plans', async ({ request }) => {
     const denied = needUser()
     if (denied) return denied
-    const parsed = IntakeSpecSchema.safeParse(await request.json())
+    const parsed = IntakeFormSchema.safeParse(await request.json())
     if (!parsed.success)
       return HttpResponse.json({ ok: false, issues: issuesOf(parsed.error) }, { status: 422 })
     const spec: IntakeSpec = parsed.data

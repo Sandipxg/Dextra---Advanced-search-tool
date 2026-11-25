@@ -4,8 +4,8 @@ import {
   COUNTRY_CODES,
   type ContentType,
   ContentTypeSchema,
+  IntakeFormSchema,
   type IntakeSpec,
-  IntakeSpecSchema,
   isSecurityGoal,
   SECURITY_USE_CASES,
   type UseCase,
@@ -62,6 +62,7 @@ export const DEFAULT_VALUES: SpecForm = {
   description: '',
   use_case: null,
   scope: { domains: [], mode: 'soft' },
+  keywords: { all: [] },
   filters: {
     country: { value: null, mode: 'soft' },
     location: { value: null, mode: 'soft' },
@@ -79,7 +80,7 @@ export const IntakePage = () => {
   const navigate = useNavigate()
   const advanced = useSettings((s) => s.advanced)
   const form = useForm<SpecForm, unknown, IntakeSpec>({
-    resolver: zodResolver(IntakeSpecSchema),
+    resolver: zodResolver(IntakeFormSchema),
     defaultValues: DEFAULT_VALUES,
   })
   const { control, register, handleSubmit, setError, setValue, formState } = form
@@ -94,9 +95,6 @@ export const IntakePage = () => {
     securityGoal ||
     (useCase != null && (AUTH_LINK_USE_CASES as readonly UseCase[]).includes(useCase))
   const needsLink = useCase != null && (AUTH_LINK_USE_CASES as readonly UseCase[]).includes(useCase)
-  const useCaseOptions = securityGoal
-    ? SECURITY_USE_CASES
-    : (Object.keys(USE_CASE_LABELS) as UseCase[])
 
   const plan = useMutation({
     mutationFn: (spec: IntakeSpec) => api.createPlan(spec),
@@ -125,8 +123,8 @@ export const IntakePage = () => {
         <div>
           <h1 className="text-2xl font-semibold">New search</h1>
           <p className="mt-1 text-sm text-muted">
-            Describe what you need. You'll see the planned searches and their cost before anything
-            runs.
+            Enter keywords and where to look. You'll see the planned searches and their cost before
+            anything runs.
           </p>
         </div>
 
@@ -154,27 +152,56 @@ export const IntakePage = () => {
               )}
             </Field>
             <Field
-              label="Describe it in one or two sentences"
-              required
-              hint="Used to pick search templates and keywords. Max 300 characters."
+              label="Keywords"
+              required={!securityGoal}
+              hint={
+                securityGoal
+                  ? 'Optional for security searches. Press Enter after each.'
+                  : 'Press Enter after each. Every result must contain them, e.g. annual report, Infosys.'
+              }
+              error={errorAt(errors, 'keywords.all')}
+            >
+              {({ id, describedBy, invalid }) => (
+                <Controller
+                  control={control}
+                  name="keywords.all"
+                  render={({ field }) => (
+                    <TagInput
+                      id={id}
+                      describedBy={describedBy}
+                      invalid={invalid}
+                      value={field.value ?? []}
+                      onChange={field.onChange}
+                      placeholder="annual report"
+                      max={20}
+                    />
+                  )}
+                />
+              )}
+            </Field>
+            <Field
+              label="Description (optional)"
+              hint="Extra context for choosing searches. Max 300 characters."
               error={errorAt(errors, 'description')}
             >
               {({ id, describedBy, invalid }) => (
                 <Textarea
                   id={id}
                   maxLength={300}
+                  rows={2}
+                  className="min-h-0"
                   aria-describedby={describedBy}
                   aria-invalid={invalid}
-                  placeholder="e.g. Annual reports and investor presentations published by Infosys"
+                  placeholder="e.g. Investor presentations from the last two years"
                   {...register('description')}
                 />
               )}
             </Field>
-            {(securityGoal || advanced) && (
+            {securityGoal && (
               <Field
                 label="What is this for?"
-                required={securityGoal}
-                hint={securityGoal ? 'Security goals are only for authorized work.' : undefined}
+                required
+                hint="Security goals are only for authorized work."
                 error={errorAt(errors, 'use_case')}
               >
                 {({ id, describedBy, invalid }) => (
@@ -190,7 +217,7 @@ export const IntakePage = () => {
                         onChange={(e) => field.onChange(e.target.value || null)}
                       >
                         <option value="">Not specified</option>
-                        {useCaseOptions.map((u) => (
+                        {SECURITY_USE_CASES.map((u) => (
                           <option key={u} value={u}>
                             {USE_CASE_LABELS[u]}
                           </option>
@@ -468,7 +495,7 @@ export const IntakePage = () => {
           </Field>
         </Card>
 
-        {advanced && <AdvancedFields country={country ?? null} securityRun={securityRun} />}
+        {advanced && <AdvancedFields country={country ?? null} />}
 
         <Card>
           <h2 className="mb-4 text-base font-semibold">How deep?</h2>

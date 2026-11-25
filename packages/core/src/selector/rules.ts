@@ -113,7 +113,9 @@ const pickParams = (
 }
 
 const canSupply = (t: Template, spec: IntakeSpec): boolean => {
-  if (t.vars.includes('name') && spec.scope.names.length === 0) return false
+  const nameSources =
+    spec.scope.names.length + spec.keywords.all.length + spec.keywords.phrases.length
+  if (t.vars.includes('name') && nameSources === 0) return false
   const needsDomains =
     t.vars.includes('domain') || ['required', 'subdomains'].includes(t.scope_mode)
   if (needsDomains && spec.scope.domains.length === 0) return false

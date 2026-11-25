@@ -251,6 +251,28 @@ describe('drops', () => {
   })
 })
 
+describe('keywords stand in for names (D-026)', () => {
+  it('fills {name} from keywords and does not repeat them', () => {
+    const plan = buildPlan(
+      spec({ goal: 'news_mentions', scope: { domains: [] }, keywords: { all: ['Infosys'] } }),
+      [sel('nw_name_news')],
+    )
+    expect(plan.queries.map((q) => q.q)).toEqual(['"Infosys"'])
+  })
+
+  it('prefers real names when given, and keeps the keyword layer', () => {
+    const plan = buildPlan(
+      spec({
+        goal: 'third_party_mentions',
+        scope: { domains: [], names: ['Infosys'] },
+        keywords: { all: ['layoffs'] },
+      }),
+      [sel('tp_forums', { platform: ['reddit.com'] })],
+    )
+    expect(plan.queries[0]?.q).toBe('site:reddit.com "Infosys" layoffs')
+  })
+})
+
 describe('injection through spec text (D-008)', () => {
   it('keeps a hostile name as one quoted literal', () => {
     const plan = buildPlan(

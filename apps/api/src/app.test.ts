@@ -88,6 +88,7 @@ describe.skipIf(!url)('API (needs DATABASE_TEST_URL)', () => {
     goal: 'documents',
     description: 'Public PDFs from target.com',
     scope: { domains: ['target.com'] },
+    keywords: { all: ['annual report'] },
   }
 
   const plan = async (cookie: string, spec: unknown = docsSpec) => {
@@ -116,7 +117,8 @@ describe.skipIf(!url)('API (needs DATABASE_TEST_URL)', () => {
     expect(bad.status).toBe(422)
     const { issues } = (await bad.json()) as { issues: { path: string }[] }
     expect(issues.map((i) => i.path)).toEqual(
-      expect.arrayContaining(['description', 'scope.domains.0']),
+      // Keywords are required on the form (D-026); the description is optional.
+      expect.arrayContaining(['keywords.all', 'scope.domains.0']),
     )
     const junk = await call('/api/spec/validate', { method: 'POST', body: '{not json' })
     expect(junk.status).toBe(400)
@@ -346,6 +348,7 @@ describe.skipIf(!url)('API (needs DATABASE_TEST_URL)', () => {
       goal: 'company_research',
       description: 'Leadership and investor pages',
       scope: { domains: ['target.com'] },
+      keywords: { all: ['leadership'] },
     })
     expect(body.run.notes).toEqual(
       expect.arrayContaining(['Ranked higher from past ratings: co_key_pages']),

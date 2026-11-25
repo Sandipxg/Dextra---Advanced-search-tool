@@ -10,18 +10,31 @@ Every filter carries a strictness setting, so a user can say "prefer India, but 
 
 ## Basic and advanced fields
 
-The default form shows 8 fields; the other 25 stay hidden until the user turns on **Settings → Advanced search options**. Hidden fields still run with their defaults, so a basic user gets the same engine as an advanced one.
+_Simplified on 2026-11-25 ([D-026](./Decisions.md#d-026)). The schema still accepts every field below; the form shows only these._
 
-| Shown by default                        | Why it's basic                                            |
-| --------------------------------------- | --------------------------------------------------------- |
-| A1 What are you trying to find?         | Picks the template group                                  |
-| A2 Describe it                          | Gives the LLM keywords and context                        |
-| B1 Target domains                       | Biggest accuracy gain; required for security goals        |
-| C1 Country                              | Common ask, maps to one API parameter                     |
-| C4 Time range                           | Common ask, maps to one API parameter                     |
-| D1 Content type                         | Strongest signal for document goals                       |
-| F1 Depth                                | Controls cost and run time                                |
-| F4 Also show results outside my filters | One switch covers the Soft/Open behaviour for all filters |
+| Shown by default                        | Notes                                                              |
+| --------------------------------------- | ------------------------------------------------------------------ |
+| A1 What are you trying to find?         | Picks the template group                                           |
+| **D2 Keywords**                         | Required except for security goals; every result must contain them |
+| A2 Description (optional)               | Extra context for picking templates                                |
+| B1 Target domains                       | Required for security goals                                        |
+| C1 Country                              |                                                                    |
+| C4 Time range                           |                                                                    |
+| D1 Content type                         |                                                                    |
+| F1 Depth                                | Controls cost                                                      |
+| F4 Also show results outside my filters |                                                                    |
+
+| Advanced ("More options")          |                        |
+| ---------------------------------- | ---------------------- |
+| B3 Domains to exclude              |                        |
+| C2 City or region                  | Needs C1               |
+| D5 Where keywords appear           | Anywhere · title · URL |
+| E3 Also search on platforms        |                        |
+| F2 Results per search              | Pages of 10            |
+| F3 Minimum results before widening |                        |
+| Hard / Soft / Open toggles         | B5, C1, C2, C4, D1, E3 |
+
+Not shown any more: A3, A4 (except for security goals), A5, B2, B4 (keywords stand in for names), B6, C3, D3, D4, E1, E2, E4, E5, F5 (results always show in the report, with CSV / JSON / PDF downloads), F7.
 
 Conditional fields appear only when needed: A4 and F6 appear when the description or A1 points to security work, and C5 appears when C4 = Custom.
 
