@@ -33,11 +33,12 @@
 ## D-022 — API and persistence layout
 
 - **Date:** 2026-11-25
-- **Status:** Accepted (not yet run against a real database — T-014)
+- **Status:** Accepted (verified against Postgres 18 on 2026-11-25)
 - **Context:** Phase 7. Store runs, audit authorizations, serve the form and summary.
 - **Decision:**
   - **Tables** (`@dextra/db`, Orchid ORM, snake_case): `run` (spec, selections, plan, notes, proposed exclusions, status `planned → confirmed → running → done/failed/cancelled`), `authorization` (insert-only audit row per confirmed security run: user, use case, domains, link, first `X-Forwarded-For` IP), `template` (seeded from the library, D-019), `template_stat` (T-011), `serp_location` (T-008). Results tables come with the runner (Phase 8).
   - **Migrations are hand-written** (rake-db). `db g` would drop tables it doesn't know, including Better Auth's.
+  - The table factory must use `nodePostgresSchemaConfig` (node-postgres driver); otherwise json columns holding arrays are not JSON-encoded.
   - **Auth:** Better Auth on the same database with its own migrations (`migrate:auth`), email/password, GitHub only when both GitHub env vars are set, built-in rate limiting for auth routes.
   - **API** (`apps/api`, Hono): `POST /api/spec/validate` (public), `POST /api/plans` (validate → select → route engines → `buildPlan` → store `planned` run), `POST /api/runs/:id/confirm` (optional accepted exclusions → re-plan; security runs write the audit row; status `confirmed`), `GET /api/runs`, `GET /api/runs/:id`, `GET /api/locations?country=&q=`. Other users' runs return 404. Plans are limited to 30 per user per hour (in-memory; move to Redis with multiple instances).
   - Logs carry method, path, status and duration only — no bodies, cookies or headers.

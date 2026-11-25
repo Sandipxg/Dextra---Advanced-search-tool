@@ -7,6 +7,8 @@ export interface AuthConfig {
   baseURL: string
   webOrigin: string
   github?: { clientId: string; clientSecret: string } | undefined
+  /** Better Auth's limiter (sign-in/up are a few per 10 s per IP). Tests turn it off. */
+  rateLimit?: boolean
 }
 
 /**
@@ -22,7 +24,7 @@ export const createAuth = (config: AuthConfig) =>
     trustedOrigins: [config.webOrigin],
     emailAndPassword: { enabled: true },
     socialProviders: config.github ? { github: config.github } : {},
-    rateLimit: { enabled: true, window: 60, max: 100 },
+    rateLimit: { enabled: config.rateLimit ?? true, window: 60, max: 100 },
   })
 
 export type Auth = ReturnType<typeof createAuth>

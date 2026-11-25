@@ -36,6 +36,7 @@ describe.skipIf(!url)('API (needs DATABASE_TEST_URL)', () => {
         secret: 'test-secret-that-is-long-enough-000000',
         baseURL: 'http://localhost:3000',
         webOrigin: ORIGIN,
+        rateLimit: false,
       }),
       // Deterministic selector so tests never call an LLM.
       select: async (spec) => ({
@@ -51,7 +52,7 @@ describe.skipIf(!url)('API (needs DATABASE_TEST_URL)', () => {
         tasks.push(task)
       },
       webOrigin: ORIGIN,
-      logger: pino({ level: 'silent' }),
+      logger: pino({ level: process.env.TEST_LOG ?? 'silent' }),
       planLimit: { max: 5, windowMs: 60_000 },
     })
   })
@@ -279,6 +280,7 @@ describe.skipIf(!url)('API (needs DATABASE_TEST_URL)', () => {
         secret: 'test-secret-that-is-long-enough-000000',
         baseURL: 'http://localhost:3000',
         webOrigin: ORIGIN,
+        rateLimit: false,
       }),
       select: async (spec) => ({
         source: 'rules',
