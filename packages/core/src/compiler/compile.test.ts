@@ -162,6 +162,30 @@ describe('scope modes', () => {
     expect(plan.queries[0]?.scope).toEqual({ kind: 'platforms', sites: ['trello.com'] })
   })
 
+  it('drops intent words like "download" from the keyword layer (T-023)', () => {
+    const plan = buildPlan(
+      spec({
+        goal: 'general_research',
+        scope: { domains: [] },
+        keywords: { all: ['shiddat', 'download'] },
+      }),
+      [sel('gr_keywords')],
+    )
+    expect(plan.queries[0]?.q).toBe('shiddat')
+  })
+
+  it('uses the first keyword as the name and the rest as the AND layer, not one query per keyword (T-023)', () => {
+    const plan = buildPlan(
+      spec({
+        goal: 'third_party_mentions',
+        scope: { domains: [] },
+        keywords: { all: ['petpooja', 'customer', 'data'] },
+      }),
+      [sel('tp_public_docs', { platform: ['trello.com'] })],
+    )
+    expect(plan.queries.map((q) => q.q)).toEqual(['site:trello.com "petpooja" customer data'])
+  })
+
   it('ORs platform sites when the template combines with or, and filters regional values', () => {
     const india = spec({
       goal: 'general_research',

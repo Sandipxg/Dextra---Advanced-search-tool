@@ -146,13 +146,25 @@ const compileTemplate = (
   const uses = (v: 'name' | 'domain' | 'keywords') => template.vars.includes(v)
 
   // Vars (D-008): filled by code from the spec only.
-  // No names given (the form no longer asks, D-026): name templates use the keywords and
-  // phrases instead, and then skip the keyword layer so terms aren't repeated.
+  // No names given (the form no longer asks, D-026): a name template uses the FIRST keyword
+  // (or phrase) as the name and keeps the remaining keywords as the ANDed keyword layer.
+  // It must never fan out into one query per keyword — that produced `site:g2.com "customer"`
+  // and other off-topic queries (T-023).
   const namesFromKeywords = uses('name') && spec.scope.names.length === 0
-  const names = (
-    namesFromKeywords ? [...spec.keywords.all, ...spec.keywords.phrases] : spec.scope.names
-  ).slice(0, MAX_VAR_FANOUT)
+  const derivedName = spec.keywords.all[0] ?? spec.keywords.phrases[0]
+  const names = (namesFromKeywords ? (derivedName ? [derivedName] : []) : spec.scope.names).slice(
+    0,
+    MAX_VAR_FANOUT,
+  )
   if (uses('name') && names.length === 0) return { drop: 'needs names, brands or keywords' }
+  // Keywords left after the first was spent as the name; appended as the AND layer below.
+  const leftoverKeywords: IntakeSpec['keywords'] = namesFromKeywords
+    ? {
+        ...spec.keywords,
+        all: spec.keywords.all.length ? spec.keywords.all.slice(1) : spec.keywords.all,
+        phrases: spec.keywords.all.length ? spec.keywords.phrases : spec.keywords.phrases.slice(1),
+      }
+    : spec.keywords
   if (uses('domain') && domains.length === 0) return { drop: 'needs target domains (B1)' }
   const keywordsVar = compileKeywordsVar(spec.keywords)
   if (uses('keywords') && !keywordsVar) return { drop: 'needs keywords (D2–D4)' }
@@ -239,8 +251,9 @@ const compileTemplate = (
   if (content && contentFilter.mode === 'soft') soft.push('content')
 
   // Keywords + exclusions.
-  const keywords =
-    uses('keywords') || namesFromKeywords ? '' : compileRequiredKeywords(spec.keywords)
+  // The {keywords} var already carries the keyword layer; otherwise append it here. For a
+  // keyword-derived name, the first keyword became the name, so only the leftovers are added.
+  const keywords = uses('keywords') ? '' : compileRequiredKeywords(leftoverKeywords)
   const excludedHosts = [
     ...new Set([...spec.scope.exclude_domains, ...spec.sources.never].map(baseHost)),
   ]

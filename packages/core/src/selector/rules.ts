@@ -65,6 +65,46 @@ export const OPT_IN_WORDS: Partial<Record<TemplateId, readonly string[]>> = {
   ],
   doc_data_files: ['data', 'dataset', 'csv', 'json', 'spreadsheet', 'excel', 'statistic', 'xml'],
   tech_stack_in_jobs: ['job', 'hiring', 'career', 'vacanc', 'recruit'],
+  // Flavour templates that otherwise fired on every general-research run and buried the
+  // plain keyword results under academic / institutional noise (T-023).
+  doc_report_kind: [
+    'report',
+    'whitepaper',
+    'white paper',
+    'case study',
+    'datasheet',
+    'brochure',
+    'policy',
+    'guidelines',
+    'presentation',
+    'manual',
+    'publication',
+  ],
+  gr_trusted_domains: [
+    'official',
+    'government',
+    'govt',
+    'ministry',
+    'regulation',
+    'regulatory',
+    'policy',
+    'institutional',
+    'university',
+  ],
+  gr_academic: [
+    'research',
+    'paper',
+    'study',
+    'studies',
+    'academic',
+    'journal',
+    'preprint',
+    'thesis',
+    'scholar',
+    'peer-reviewed',
+    'citation',
+    'literature',
+  ],
   // Raw media files are rarely indexed: only when the request asks for files (D-028).
   doc_media_files: [
     'mp4',
@@ -87,6 +127,9 @@ export const OPT_IN_WORDS: Partial<Record<TemplateId, readonly string[]>> = {
 
 /** Opt-in templates that exist for a file type: a matching content-type tick opts them in. */
 const OPT_IN_BY_CONTENT: ReadonlySet<TemplateId> = new Set<TemplateId>(['doc_data_files'])
+
+/** Templates that are only a file-type filter: skipped without keywords or a target (T-023). */
+const NET_TEMPLATES: ReadonlySet<TemplateId> = new Set<TemplateId>(['doc_by_type'])
 
 /**
  * Media templates (D-028): web-page searches on video, image and audio sites. They run for
@@ -231,8 +274,19 @@ export const ruleBasedSelections = (spec: IntakeSpec): Selection[] => {
     const fixed = fixedFiletypes(t)
     return !contentExts.size || !fixed.length || fixed.some((e) => contentExts.has(e))
   }
+  // "Net" templates are just a file-type filter with no keyword layer (e.g. doc_by_type →
+  // `filetype:pdf`). Without keywords or a target domain they return every PDF on the web,
+  // so they only run when something anchors them (T-023).
+  const hasKeywords =
+    spec.keywords.all.length + spec.keywords.phrases.length + spec.keywords.any.length > 0
+  const anchored = (t: Template) =>
+    !NET_TEMPLATES.has(t.id as TemplateId) || hasKeywords || spec.scope.domains.length > 0
   const allowed = (t: Template) =>
-    (security || t.sensitivity !== 'security') && canSupply(t, spec) && optedIn(t) && fitsContent(t)
+    (security || t.sensitivity !== 'security') &&
+    canSupply(t, spec) &&
+    optedIn(t) &&
+    fitsContent(t) &&
+    anchored(t)
 
   const goal = templatesForGoal(spec.goal)
     .filter(allowed)

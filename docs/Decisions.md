@@ -1,5 +1,18 @@
 # Decisions
 
+## D-029 — Results ranked by keyword relevance; noisy default templates made opt-in
+
+- **Date:** 2026-11-25
+- **Status:** Accepted (accuracy plan steps 1–4, T-023)
+- **Context:** Users reported inaccurate results. The diagnosis in `reports/Improving dork search accuracy.md` found the cause was Dextra's own selection and scoring, not Google: the scorer never checked whether a result contained the user's keywords; several templates were picked by default for any request; and each keyword became its own brand name in name templates.
+- **Decision:**
+  - **Keyword relevance (`runner/score.ts`).** The score now adds +4 per required keyword (`keywords.all` + `keywords.phrases`) found in the result's title, snippet or URL and −16 per keyword missing. A result missing any required keyword is flagged to the reader with "May not match your keywords". So an off-topic page the dork mechanically matched sinks below a relevant one. Results are still grouped (main / outside / unverified) and shown as tabs; relevance now orders results within a tab.
+  - **Opt-in flavour templates (`selector/rules.ts`).** `gr_academic`, `gr_trusted_domains` and `doc_report_kind` only run when the request signals them (research/official/report words), instead of on every run. `doc_by_type` (a bare `filetype:` net) runs only when keywords or a target domain anchor it.
+  - **Name fan-out fix (`compiler/compile.ts`).** When no names are given, a name template uses the first keyword as the name and keeps the rest as the ANDed keyword layer, in one query — never one query per keyword (which produced `site:g2.com "customer"`).
+  - **Intent words (`compiler/tokens.ts`, `keywords.ts`).** "download", "free", "full", "watch", "online" and the like are dropped from the required AND layer and from relevance scoring.
+- **Deferred:** quoting rare proper-noun entities needs the measurement harness (T-025) to tune without hurting common-word searches, so it is not done here. The report's later steps (SERP params, paging, RRF, reranker, verification, LLM selector) are T-024/T-025 and beyond.
+- **Consequences:** No new paid searches; these are selection and ranking changes. `reports/` and `research_notes/` are gitignored (generated deliverables, not source).
+
 ## D-028 — Media searches are web-page searches on media sites
 
 - **Date:** 2026-11-25

@@ -5,7 +5,13 @@ import type { PlannedQuery } from '../compiler/types'
 import { type IntakeSpecInput, IntakeSpecSchema } from '../schema/intake-spec'
 import { csvCell, groupByGoal, summarizeResults, toCsv } from './report'
 import { runPlan } from './run'
-import { ENGINE_IGNORED_SCOPE, OUTSIDE_LABELS, scoreResults, UNVERIFIED } from './score'
+import {
+  ENGINE_IGNORED_SCOPE,
+  LOOSE_MATCH,
+  OUTSIDE_LABELS,
+  scoreResults,
+  UNVERIFIED,
+} from './score'
 import type { Hit, RawResult } from './types'
 import { normalizeUrl } from './url'
 
@@ -134,6 +140,28 @@ describe('scoreResults', () => {
       ['target.com/b.pdf', 1, 1],
     ])
     expect(scored[0]?.url).toBe('https://www.target.com/a.pdf?utm_source=x')
+  })
+
+  it('ranks results with the required keywords above ones missing them and flags the loose ones (T-023)', () => {
+    const s = spec({ keywords: { all: ['shiddat'] } })
+    const [q] = buildPlan(s, [docs]).queries
+    const scored = scoreResults(s, [
+      hit(q as PlannedQuery, 'https://target.com/other.pdf', 1, 'Annual report'),
+      hit(q as PlannedQuery, 'https://target.com/shiddat.pdf', 2, 'Shiddat review'),
+    ])
+    expect(scored[0]?.key).toBe('target.com/shiddat.pdf')
+    expect(scored.find((r) => r.key === 'target.com/other.pdf')?.reasons).toContain(LOOSE_MATCH)
+    expect(scored.find((r) => r.key === 'target.com/shiddat.pdf')?.reasons).not.toContain(
+      LOOSE_MATCH,
+    )
+  })
+
+  it('ignores intent words like "download" when scoring keyword relevance (T-023)', () => {
+    const s = spec({ keywords: { all: ['shiddat', 'download'] } })
+    const [q] = buildPlan(s, [docs]).queries
+    // "download" absent from the page must not flag it loose; "shiddat" is present.
+    const [r] = scoreResults(s, [hit(q as PlannedQuery, 'https://target.com/shiddat.pdf', 1)])
+    expect(r?.reasons).not.toContain(LOOSE_MATCH)
   })
 
   it('puts off-scope primary results in Outside (Soft), drops them (Hard), lists them unverified (security)', () => {

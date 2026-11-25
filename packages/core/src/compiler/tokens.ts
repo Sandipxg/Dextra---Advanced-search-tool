@@ -39,6 +39,28 @@ export const orGroup = (items: readonly string[]): string => {
   return `(${parts.join(' OR ')})`
 }
 
+/**
+ * Intent words that describe what the user wants to *do*, not what the page is about
+ * (T-023). Kept out of the required AND layer and out of relevance scoring: "download",
+ * "free" and the like otherwise drag in parked domains and off-topic "Download X" pages.
+ */
+export const INTENT_WORDS: ReadonlySet<string> = new Set([
+  'download',
+  'downloads',
+  'free',
+  'full',
+  'watch',
+  'online',
+  'stream',
+  'streaming',
+  'hd',
+  'play',
+])
+
+/** True when the cleaned, lowercased text is a single intent word. */
+export const isIntentWord = (text: string): boolean =>
+  INTENT_WORDS.has(cleanText(text).toLowerCase())
+
 /** Words as Google counts them for its 32-word limit (OR and parens don't count). */
 export const wordCount = (query: string): number =>
   query
