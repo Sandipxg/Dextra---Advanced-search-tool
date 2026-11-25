@@ -8,7 +8,7 @@ import { applyExclusions } from './exclusions'
 import { MAX_SELECTIONS, type SelectorOutput, toSelections } from './output'
 import { buildSelectorUserMessage, SELECTOR_SYSTEM_PROMPT } from './prompt'
 import { routeEngines } from './router'
-import { ruleBasedSelections } from './rules'
+import { mentions, ruleBasedSelections } from './rules'
 
 const spec = (input: Partial<IntakeSpecInput> = {}) =>
   IntakeSpecSchema.parse({
@@ -80,6 +80,44 @@ describe('prompt', () => {
     expect(
       buildSelectorUserMessage(spec({ goal: 'general_research', scope: { domains: [] } })),
     ).toContain('Keywords missing: yes.')
+  })
+})
+
+describe('mentions', () => {
+  it('matches phrases at word starts, including plurals', () => {
+    expect(mentions('annual reports and decks', 'annual report')).toBe(true)
+    expect(mentions('statistics for 2026', 'statistic')).toBe(true)
+    expect(mentions('metadata standards', 'data')).toBe(false)
+    expect(mentions('c++ (internal)', 'internal')).toBe(true)
+  })
+})
+
+describe('ruleBasedSelections: relevance (T-016)', () => {
+  it('uses values the request mentions and skips opt-in templates it does not ask for', () => {
+    const picks = ruleBasedSelections(
+      spec({
+        description: 'Annual reports and investor presentations published by Infosys',
+        filters: { content: { value: ['pdf'] } },
+      }),
+    )
+    expect(picks.map((p) => p.templateId)).toEqual(['doc_by_type', 'doc_report_kind'])
+    expect(picks[1]).toMatchObject({
+      params: { kind: ['annual report', 'presentation'] },
+      reason: 'Matches "annual report", "presentation" in your request',
+    })
+  })
+
+  it('includes an opt-in template when the request asks for it', () => {
+    const picks = ruleBasedSelections(
+      spec({ description: 'Documents marked internal use only that leaked onto the site' }),
+    )
+    const label = picks.find((p) => p.templateId === 'doc_sensitive_label')
+    expect(label?.params.label).toEqual(['internal use only'])
+  })
+
+  it('opts in from keywords as well as the description', () => {
+    const picks = ruleBasedSelections(spec({ keywords: { all: ['dataset'] } }))
+    expect(picks.map((p) => p.templateId)).toContain('doc_data_files')
   })
 })
 
