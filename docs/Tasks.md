@@ -8,14 +8,15 @@ _None_
 
 ## 🔜 Up next
 
+- [ ] T-017 Playwright end-to-end tests against the real API (after T-014): basic happy path, security goal blocked without authorization
+- [ ] T-018 Split the web bundle (core selector prompt and catalogue are not needed in the browser)
 - [ ] T-014 Set `DATABASE_URL` / `DATABASE_TEST_URL` in `.env`, run `pnpm --filter @dextra/db db create` (both URLs), `pnpm db:setup`, then `pnpm test` so the 8 API tests run against Postgres
 - [ ] T-005b Live selector run with an `ANTHROPIC_API_KEY` (`pnpm --filter @dextra/selector try`); compare LLM picks with rule picks on a few specs
 - [ ] T-001b Re-run the operator matrix with Serper and Brave keys; decide whether to enable them (D-015)
 
 ## 🧊 Backlog
 
-- [ ] T-007 Intake form UI: basic mode (8 fields) + advanced toggle
-- [ ] T-008 Cached SERP API locations list for the city dropdown
+- [ ] T-008 Cached SERP API locations list for the city dropdown — UI done (city combobox reads `/api/locations`); sync script to fill `serp_location` still to do
 - [ ] T-011 Feedback loop: useful-hit rate per template and engine
 - [ ] T-012 Decide fixed ~20% outside-scope budget vs only-on-shortfall (open in D-003)
 
@@ -25,6 +26,7 @@ _None_
 
 ## ✅ Done (recent)
 
+- [x] T-007 Web app: intake form (basic + advanced + security), pre-run summary, progress, report with groups and exports, demo mode (D-024) (2026-11-25)
 - [x] T-016 Rule-based picks follow the request: opt-in templates need a matching word, mentioned param values win (2026-11-25)
 - [x] T-015 Live end-to-end check with SerpAPI: 3 searches, 28 results, all in scope, no fallback needed (2026-11-25)
 - [x] T-009 Runner with paging, Soft fallback and F4 outside batches (D-023) (2026-11-25)

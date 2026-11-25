@@ -1,5 +1,20 @@
 # Decisions
 
+## D-024 — Web app
+
+- **Date:** 2026-11-25
+- **Status:** Accepted
+- **Context:** Phase 9 (T-007). Form, pre-run summary, progress and report for signed-in users.
+- **Decision:**
+  - **Stack:** React 19 + Vite 8 SPA, React Router 8, TanStack Query (server data), Zustand (UI settings only: the advanced-options switch, kept in `localStorage`), React Hook Form with `zodResolver(IntakeSpecSchema)` — the same schema as the API (D-005). Tailwind 4 with light/dark design tokens. Small hand-written UI components (button, field, combobox, tag input, segmented, chips) instead of the shadcn CLI, which needs interactive setup.
+  - **API access:** same origin. Vite proxies `/api` to the API in dev, so Better Auth cookies work without CORS.
+  - **Form:** basic mode shows the 8 fields; the use-case field and the Authorization card appear automatically for security goals / use cases; the header switch shows the 25 advanced fields with per-filter Hard/Soft/Open toggles. Domain fields drop a leading `www.` (a pasted URL almost always means the whole site); the API itself still accepts `www.` domains. Server-side field errors map back onto the form by path.
+  - **Summary page:** searches now / possible extra / query budget, how templates were picked, strictness, every planned query (outside and fallback batches separately), dropped and blocked templates, and the suggested exclusions as checkboxes. Nothing runs before "Confirm and run".
+  - **Run page:** polls every 2 s while searching; the report shows Results / Outside scope / Unverified with reason labels, optional "group by goal", and CSV/JSON export links. Result links are rendered only for http(s) URLs, with `rel="noopener noreferrer nofollow"`.
+  - **Demo mode** (`pnpm --filter @dextra/web dev:mock`): MSW handlers stand in for the API using the real core pipeline (rule-based picks, `buildPlan`, `runPlan`, `scoreResults`) with fake search results. Where the browser refuses a service worker (the desktop app's browser pane does), `fetch` is routed through the same handlers. The same handlers back the component tests.
+  - **Tests:** Vitest + Testing Library + MSW (jsdom). Playwright end-to-end tests wait for a running API with a database (T-014, T-017).
+- **Consequences:** The production bundle is over 500 kB because the whole core package (including the selector prompt) is imported; split it later (T-018).
+
 ## D-023 — Runner, scoring and report
 
 - **Date:** 2026-11-25

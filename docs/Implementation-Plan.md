@@ -158,6 +158,8 @@ This is the safety boundary; build it **before** the LLM.
 
 ## Phase 9 — Frontend (T-007, T-008, 3 days)
 
+> ✅ Done 2026-11-25 on `feat/phase9-web` (D-024). Playwright e2e waits for the database (T-017).
+
 - Basic mode: the 8 fields (A1, A2, B1, C1, C4, D1, F1, F4) with conditional A4/F6 (security) and C5 (custom dates).
 - Settings → Advanced: remaining sections A–F, per-filter Hard/Soft/Open toggles, engine override.
 - Searchable dropdowns (shadcn Combobox) storing codes; city dropdown fed by `/locations` filtered by country; tag inputs for D2–D4; domain list with live normalisation.
