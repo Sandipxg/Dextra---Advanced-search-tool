@@ -1,0 +1,24 @@
+{
+  "name": "@dextra/db",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run --passWithNoTests",
+    "db": "tsx src/db-script.ts",
+    "seed": "tsx scripts/seed.ts"
+  },
+  "dependencies": {
+    "@dextra/core": "workspace:*",
+    "orchid-orm": "^1.78.63",
+    "pg": "^8.23.1",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@types/pg": "^8.23.1"
+  }
+}

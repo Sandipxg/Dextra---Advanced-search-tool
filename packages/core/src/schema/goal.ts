@@ -13,7 +13,7 @@ export const GOALS = [
   'general_research',
 ] as const
 
-export const GoalSchema = z.enum(GOALS)
+export const GoalSchema = z.enum(GOALS, { error: 'Choose a goal' })
 export type Goal = z.infer<typeof GoalSchema>
 
 /** Goals whose templates are `sensitivity: security` — force Hard scope + authorization (D-003, D-012). */

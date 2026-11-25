@@ -59,6 +59,8 @@ Keeping all decision logic in `packages/core` (no network, no DB) is the main de
 
 ## Phase 2 — SERP provider spike (T-001, 1 day)
 
+> ✅ Done 2026-11-25 on `feat/t-001-serp-providers`: SerpAPI/Google for v1, Bing off, results re-checked in code, pages of 10 (D-015 – D-017). Serper/Brave re-test is T-001b.
+
 Goal: pick the default provider with evidence, not guesses.
 
 - Define `SerpProvider` interface: `search({ q, engine, type, gl, hl, location, tbs, num, page }) → { results: SerpResult[], costUnits }`.
@@ -69,6 +71,8 @@ Goal: pick the default provider with evidence, not guesses.
 - Output: D-008 "SERP provider" (expected outcome: Serper as Google default for price; SerpAPI for Bing/Scholar/News and locations list; Brave optional), updated Context.md operator notes.
 
 ## Phase 3 — Intake spec schema (T-003, 1–2 days)
+
+> ✅ Done 2026-11-25 on `feat/t-003-intake-schema` (D-018).
 
 In `packages/core/schema`:
 
@@ -86,7 +90,7 @@ In `packages/core/schema`:
 
 ## Phase 4 — Template library (T-004, 1–2 days)
 
-> ✅ Content done: `docs/Template-Library.md` v1.0 (36 templates, decisions D-007–D-013). Remaining work: `TemplateSchema` in Zod, YAML seed script (T-004b), engine lists re-checked against the T-001 matrix.
+> ✅ Done 2026-11-25: library v1.1 (engines checked in T-001), `TemplateSchema` + generator on `feat/t-004b-template-schema` (D-019). DB seed happens in Phase 7.
 
 - `TemplateSchema`: `id`, `goal`, `query` (with `{placeholders}`), `params` (each an enum list), `engines`, `signal`, `priority`, `requiresScope: boolean`.
 - ~20 starter templates covering every A1 goal, e.g.
@@ -102,6 +106,8 @@ In `packages/core/schema`:
 
 ## Phase 5 — Query compiler + guardrails (T-006, 2 days)
 
+> ✅ Done 2026-11-25 on `feat/t-006-compiler-guardrails` (D-020).
+
 This is the safety boundary; build it **before** the LLM.
 
 - **Compiler** (`compile(spec, selection) → PlannedQuery[]`): fills placeholders, then appends layers from Context.md in order — scope (`site:`), signal, exclusion (A5/B3/E4 → `-site:`, `-term`; B2 → `-site:www.`), precision (D2 terms, D3 `(a OR b)`, D4 quotes, D5 `intitle:`/`inurl:`/`intext:`). Maps C1–C5 to API params (`gl`, `location`, `hl`, `tbs=qdr:*|cdr:1,cd_min,cd_max`), F2 to `num`.
@@ -116,6 +122,8 @@ This is the safety boundary; build it **before** the LLM.
 
 ## Phase 6 — Template selector + engine router (T-005, 2 days)
 
+> ✅ Done 2026-11-25 on `feat/t-005-selector` (D-021). Live LLM check pending a key (T-005b).
+
 - **Engine router (code first, D-004):** Google default → per-template fallback to next capable engine → goal defaults (news → News endpoint, academic → Scholar, third-party mentions → +Bing) → accept at most one LLM-suggested engine with a reason → E1 override replaces all in advanced mode.
 - **LLM call:** one tool `select_templates` whose input schema is generated from Zod (`zod-to-json-schema`): `{ selections: [{ templateId: enum, params: {...enum}, reason }], extraEngine?: {engine, reason}, exclusions: { terms[], sites[] }, followUpQuestion?: string }`.
   - Prompt gets only the validated spec + the template catalogue (id, goal, signal, params). No free-form query field exists in the schema.
@@ -126,6 +134,8 @@ This is the safety boundary; build it **before** the LLM.
 - Tests with MSW-mocked LLM responses, including invented template IDs and bad params (must be rejected).
 
 ## Phase 7 — API + persistence (2 days)
+
+> 🟡 Code done 2026-11-25 on `feat/phase7-api-db` (D-022); first run against a real database is T-014. Results tables move to Phase 8.
 
 - Better Auth (email/password + GitHub OAuth) in `apps/api`.
 - Orchid ORM tables: `users` (Better Auth), `runs` (spec JSON, status, user, created), `planned_queries`, `serp_results` (raw), `results` (deduped URL, score, group, reasons), `authorizations` (engagement link, confirmed_at, user — audit log), `template_stats` (for T-011), `serp_locations` cache (T-008).
@@ -139,12 +149,16 @@ This is the safety boundary; build it **before** the LLM.
 
 ## Phase 8 — Runner, scorer, report (T-009, T-010, 2 days)
 
+> ✅ Done 2026-11-25 on `feat/phase8-runner-scorer` (D-023). Live check with SerpAPI is T-015.
+
 - Runner: concurrency-limited (p-limit), retries with backoff, per-run cost accumulator, stops at budget. Runs primary batch → checks F3 minimum → runs Soft fallback batches only if short → runs F4 batch if on.
 - Scorer: URL normalisation (scheme, `www.`, trailing slash, tracking params) → dedupe → score = number of distinct queries/templates that surfaced it + rank position + Open-filter matches + E5 source preference. B6 "already have" URLs removed or flagged "new only".
 - Grouping: main list vs "Outside scope" with reason labels ("Outside your location", "Outside your time range"); security runs list related assets as "unverified, not in scope" and never query them.
 - Outputs: ranked list, grouped by goal, CSV, JSON (F5).
 
 ## Phase 9 — Frontend (T-007, T-008, 3 days)
+
+> ✅ Done 2026-11-25 on `feat/phase9-web` (D-024). Playwright e2e waits for the database (T-017).
 
 - Basic mode: the 8 fields (A1, A2, B1, C1, C4, D1, F1, F4) with conditional A4/F6 (security) and C5 (custom dates).
 - Settings → Advanced: remaining sections A–F, per-filter Hard/Soft/Open toggles, engine override.
@@ -154,6 +168,8 @@ This is the safety boundary; build it **before** the LLM.
 - Playwright: basic-mode happy path; security goal without authorization is blocked.
 
 ## Phase 10 — Feedback loop (T-011, T-012, later)
+
+> ✅ Done 2026-11-25 on `feat/phase10-feedback` (D-025). T-012 decided by data later.
 
 - "Useful / not useful" per result → `template_stats` hit rate per template × engine × goal.
 - Feed hit rates into engine router goal defaults and template priority.

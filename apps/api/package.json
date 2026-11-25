@@ -1,0 +1,31 @@
+{
+  "name": "@dextra/api",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "start": "tsx src/server.ts",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "migrate:auth": "tsx src/migrate-auth.ts",
+    "try-run": "tsx scripts/try-run.ts",
+    "template-report": "tsx scripts/template-report.ts"
+  },
+  "dependencies": {
+    "@dextra/core": "workspace:*",
+    "@dextra/db": "workspace:*",
+    "@dextra/env": "workspace:*",
+    "@dextra/selector": "workspace:*",
+    "@dextra/serp": "workspace:*",
+    "@hono/node-server": "^2.1.11",
+    "better-auth": "^1.7.28",
+    "hono": "^4.13.22",
+    "pg": "^8.23.1",
+    "pino": "^10.4.0",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@types/pg": "^8.23.1"
+  }
+}

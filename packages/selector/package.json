@@ -1,0 +1,19 @@
+{
+  "name": "@dextra/selector",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "try": "tsx scripts/try-selector.ts"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^1.14.0",
+    "@dextra/core": "workspace:*",
+    "zod": "^4.6.7"
+  }
+}

@@ -17,8 +17,17 @@ describe('createServerEnv', () => {
   })
 
   it('fails fast when a required key is missing', () => {
+    const { BETTER_AUTH_SECRET: _omit, ...rest } = valid
+    expect(() => createServerEnv(rest)).toThrow(/BETTER_AUTH_SECRET/)
+  })
+
+  it('treats the Anthropic and GitHub keys as optional and defaults the rest', () => {
     const { ANTHROPIC_API_KEY: _omit, ...rest } = valid
-    expect(() => createServerEnv(rest)).toThrow(/ANTHROPIC_API_KEY/)
+    const env = createServerEnv(rest)
+    expect(env.ANTHROPIC_API_KEY).toBeUndefined()
+    expect(env.GITHUB_CLIENT_ID).toBeUndefined()
+    expect(env.WEB_ORIGIN).toBe('http://localhost:5173')
+    expect(env.PORT).toBe(3000)
   })
 
   it('treats empty strings as missing', () => {

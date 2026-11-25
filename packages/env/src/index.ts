@@ -15,7 +15,14 @@ export const createServerEnv = (runtimeEnv: Record<string, string | undefined>) 
       DATABASE_URL: z.url(),
       BETTER_AUTH_SECRET: z.string().min(32),
       BETTER_AUTH_URL: z.url(),
-      ANTHROPIC_API_KEY: z.string().min(1),
+      /** Optional: without it the selector uses rule-based picks (D-021). */
+      ANTHROPIC_API_KEY: z.string().min(1).optional(),
+      /** GitHub sign-in is enabled only when both are set. */
+      GITHUB_CLIENT_ID: z.string().min(1).optional(),
+      GITHUB_CLIENT_SECRET: z.string().min(1).optional(),
+      /** Origin of the web app (CORS + Better Auth trusted origin). */
+      WEB_ORIGIN: z.url().default('http://localhost:5173'),
+      PORT: z.coerce.number().int().min(1).max(65535).default(3000),
       SERPER_API_KEY: z.string().min(1).optional(),
       SERPAPI_API_KEY: z.string().min(1).optional(),
       BRAVE_API_KEY: z.string().min(1).optional(),
