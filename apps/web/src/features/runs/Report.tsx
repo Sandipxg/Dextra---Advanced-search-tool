@@ -1,7 +1,7 @@
 import type { ScoredResult } from '@dextra/core'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Download, ExternalLink, ThumbsDown, ThumbsUp } from 'lucide-react'
-import { useState } from 'react'
+import { useLayoutEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { Badge, Card, Segmented } from '../../components/ui'
 import { api, type Feedback, type ReportResult, type RunSummary } from '../../lib/api'
@@ -9,6 +9,9 @@ import { cn } from '../../lib/cn'
 import { GOAL_LABELS } from '../../lib/labels'
 
 type Group = ScoredResult['group']
+
+/** Rows visible before the list scrolls. */
+const VISIBLE_ROWS = 7
 
 const GROUP_LABELS: Record<Group, string> = {
   main: 'Results',
@@ -126,7 +129,6 @@ const ResultItem = ({
 export const Report = ({ run }: { run: RunSummary }) => {
   const stats = run.stats
   const [group, setGroup] = useState<Group>('main')
-  const [byGoal, setByGoal] = useState(false)
   const results = useQuery({
     queryKey: ['results', run.id, group],
     queryFn: () => api.getResults(run.id, group),
@@ -160,51 +162,59 @@ export const Report = ({ run }: { run: RunSummary }) => {
   const groups = (['main', 'outside', 'unverified'] as const).filter(
     (g) => g === 'main' || (stats?.[g] ?? 0) > 0,
   )
-  const buckets = byGoal
-    ? Object.entries(
-        list.reduce<Record<string, ReportResult[]>>((acc, r) => {
-          const bucket = acc[r.goal] ?? []
-          bucket.push(r)
-          acc[r.goal] = bucket
-          return acc
-        }, {}),
-      )
-    : [['', list] as const]
+
+  // Show exactly the first VISIBLE_ROWS results; the rest scroll inside the list.
+  const listRef = useRef<HTMLOListElement>(null)
+  const [maxHeight, setMaxHeight] = useState<number | undefined>(undefined)
+  useLayoutEffect(() => {
+    const measure = () => {
+      const rows = Array.from(listRef.current?.children ?? []).slice(0, VISIBLE_ROWS)
+      const total = rows.reduce((sum, row) => sum + (row as HTMLElement).offsetHeight, 0)
+      setMaxHeight(list.length > VISIBLE_ROWS && total > 0 ? total : undefined)
+    }
+    measure()
+    window.addEventListener('resize', measure)
+    return () => window.removeEventListener('resize', measure)
+  }, [list])
+
+  const [pdfBusy, setPdfBusy] = useState(false)
+  const downloadPdf = async () => {
+    setPdfBusy(true)
+    try {
+      const { results: all } = await api.getAllResults(run.id)
+      const { downloadResultsPdf } = await import('../../lib/pdf')
+      await downloadResultsPdf(run, all)
+    } catch {
+      toast.error('Could not create the PDF')
+    } finally {
+      setPdfBusy(false)
+    }
+  }
+
+  const keywords = [...run.spec.keywords.all, ...run.spec.keywords.phrases]
+  const downloadClass =
+    'inline-flex items-center gap-2 rounded-md border border-border bg-surface px-3 py-2 text-sm hover:bg-surface-2 disabled:opacity-60'
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <p className="text-sm text-muted">{GOAL_LABELS[run.spec.goal]}</p>
-          <h1 className="text-2xl font-semibold">Search results</h1>
-          <p className="mt-1 text-sm text-muted">{run.spec.description}</p>
-        </div>
-        <div className="flex gap-2">
-          <a
-            href={api.exportUrl(run.id, 'csv')}
-            className="inline-flex items-center gap-2 rounded-md border border-border bg-surface px-3 py-2 text-sm hover:bg-surface-2"
-          >
-            <Download className="size-4" aria-hidden /> CSV
-          </a>
-          <a
-            href={api.exportUrl(run.id, 'json')}
-            className="inline-flex items-center gap-2 rounded-md border border-border bg-surface px-3 py-2 text-sm hover:bg-surface-2"
-          >
-            <Download className="size-4" aria-hidden /> JSON
-          </a>
-        </div>
+    <div className="space-y-5">
+      <div>
+        <p className="text-sm text-muted">{GOAL_LABELS[run.spec.goal]}</p>
+        <h1 className="text-2xl font-semibold">Search results</h1>
+        {keywords.length > 0 && (
+          <p className="mt-1 text-sm text-muted">Keywords: {keywords.join(', ')}</p>
+        )}
+        {stats && (
+          <p className="mt-1 text-sm text-muted">
+            {stats.main} results · {stats.outside} outside scope
+            {stats.unverified ? ` · ${stats.unverified} unverified` : ''} · {stats.requests}{' '}
+            searches
+            {stats.fallbackRan ? ' · wider fallback ran' : ''}
+            {stats.errors.length ? ` · ${stats.errors.length} searches failed` : ''}
+          </p>
+        )}
       </div>
 
-      {stats && (
-        <p className="text-sm text-muted">
-          {stats.main} results · {stats.outside} outside scope
-          {stats.unverified ? ` · ${stats.unverified} unverified` : ''} · {stats.requests} searches
-          {stats.fallbackRan ? ' · wider fallback ran' : ''}
-          {stats.errors.length ? ` · ${stats.errors.length} searches failed` : ''}
-        </p>
-      )}
-
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      {groups.length > 1 && (
         <Segmented
           label="Result group"
           value={group}
@@ -214,49 +224,52 @@ export const Report = ({ run }: { run: RunSummary }) => {
             label: `${GROUP_LABELS[g]} (${stats?.[g] ?? 0})`,
           }))}
         />
-        {group === 'main' && (
-          <label className="flex items-center gap-2 text-sm text-muted">
-            <input
-              type="checkbox"
-              className="size-4"
-              checked={byGoal}
-              onChange={(e) => setByGoal(e.target.checked)}
-            />
-            Group by goal
-          </label>
-        )}
-      </div>
+      )}
       <p className="text-sm text-muted">
         {GROUP_HINTS[group]} Rate results with 👍 / 👎 to improve future searches.
       </p>
 
-      <Card className="py-1">
+      <Card className="p-0">
         {results.isPending ? (
-          <p className="py-6 text-sm text-muted">Loading results…</p>
+          <p className="px-5 py-6 text-sm text-muted">Loading results…</p>
         ) : list.length === 0 ? (
-          <p className="py-6 text-sm text-muted">Nothing in this group.</p>
+          <p className="px-5 py-6 text-sm text-muted">Nothing in this group.</p>
         ) : (
-          buckets.map(([goal, items]) => (
-            <div key={goal || 'all'}>
-              {goal && (
-                <h2 className="pt-4 text-sm font-semibold">
-                  {GOAL_LABELS[goal as keyof typeof GOAL_LABELS] ?? goal}
-                </h2>
-              )}
-              <ol>
-                {items.map((r, i) => (
-                  <ResultItem
-                    key={r.key}
-                    r={r}
-                    rank={i + 1}
-                    onRate={(value) => rate.mutate({ id: r.id, value })}
-                  />
-                ))}
-              </ol>
-            </div>
-          ))
+          <ol
+            ref={listRef}
+            aria-label={`${GROUP_LABELS[group]} list`}
+            style={{ maxHeight }}
+            className="overflow-y-auto px-5"
+          >
+            {list.map((r, i) => (
+              <ResultItem
+                key={r.key}
+                r={r}
+                rank={i + 1}
+                onRate={(value) => rate.mutate({ id: r.id, value })}
+              />
+            ))}
+          </ol>
         )}
       </Card>
+      {list.length > VISIBLE_ROWS && (
+        <p className="-mt-3 text-xs text-muted">
+          Showing {VISIBLE_ROWS} of {list.length} — scroll the list for more.
+        </p>
+      )}
+
+      <div className="flex flex-wrap gap-2">
+        <span className="self-center text-sm text-muted">Download all results:</span>
+        <a href={api.exportUrl(run.id, 'csv')} className={downloadClass}>
+          <Download className="size-4" aria-hidden /> CSV
+        </a>
+        <a href={api.exportUrl(run.id, 'json')} className={downloadClass}>
+          <Download className="size-4" aria-hidden /> JSON
+        </a>
+        <button type="button" onClick={downloadPdf} disabled={pdfBusy} className={downloadClass}>
+          <Download className="size-4" aria-hidden /> {pdfBusy ? 'Creating PDF…' : 'PDF'}
+        </button>
+      </div>
     </div>
   )
 }

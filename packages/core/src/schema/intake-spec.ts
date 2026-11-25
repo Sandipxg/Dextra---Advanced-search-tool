@@ -114,7 +114,8 @@ const AuthorizationSchema = z.object({
 
 const BaseSpecSchema = z.object({
   /** A1 */ goal: GoalSchema,
-  /** A2 */ description: textField(300).pipe(z.string().min(1, 'Describe what you want to find')),
+  /** A2 — optional context; keywords drive the search (D-026) */ description:
+    textField(300).default(''),
   /** A3 */ perfect_result: z
     .object({
       text: textField(500).default(''),
@@ -211,10 +212,35 @@ const crossFieldRules = (spec: BaseSpec, ctx: z.RefinementCtx) => {
   }
 }
 
-export const IntakeSpecSchema = BaseSpecSchema.superRefine(crossFieldRules).transform((spec) =>
-  // B5 is locked to Hard for security runs (D-003).
-  isSecurityRun(spec) ? { ...spec, scope: { ...spec.scope, mode: 'hard' as const } } : spec,
-)
+// B5 is locked to Hard for security runs (D-003).
+const lockSecurityScope = (spec: BaseSpec): BaseSpec =>
+  isSecurityRun(spec) ? { ...spec, scope: { ...spec.scope, mode: 'hard' as const } } : spec
+
+export const IntakeSpecSchema =
+  BaseSpecSchema.superRefine(crossFieldRules).transform(lockSecurityScope)
+
+/** Keywords drive the search (D-026); security goals search by domain + signal instead. */
+const hasKeywordsOrSecurityGoal = (spec: unknown): boolean => {
+  // Runs even when other fields are invalid (`when` below), so read defensively.
+  const value = spec as { goal?: unknown; keywords?: { all?: unknown[]; phrases?: unknown[] } }
+  const goal = GoalSchema.safeParse(value?.goal)
+  if (goal.success && isSecurityGoal(goal.data)) return true
+  return (value?.keywords?.all?.length ?? 0) + (value?.keywords?.phrases?.length ?? 0) > 0
+}
+
+/**
+ * What a person submits through the search form (web form and POST /api/plans): the
+ * intake spec plus "at least one keyword" for non-security goals (D-026). Specs built in
+ * code (tests, fallbacks) use `IntakeSpecSchema`.
+ */
+export const IntakeFormSchema = BaseSpecSchema.refine(hasKeywordsOrSecurityGoal, {
+  path: ['keywords', 'all'],
+  message: 'Add at least one keyword',
+  // Report it together with other errors, not only after they are fixed.
+  when: () => true,
+})
+  .superRefine(crossFieldRules)
+  .transform(lockSecurityScope)
 
 /** What the form/API sends (most fields optional). */
 export type IntakeSpecInput = z.input<typeof IntakeSpecSchema>

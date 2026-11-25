@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  IntakeFormSchema,
   type IntakeSpecInput,
   IntakeSpecSchema,
   isSecurityRun,
@@ -63,10 +64,42 @@ describe('basic mode', () => {
     expect(spec.filters.content.value).toEqual(['pdf', 'presentation'])
   })
 
-  it('requires A1 and A2', () => {
+  it('requires A1; the description is optional but capped (D-026)', () => {
     expect(issuePaths({ description: 'x' })).toContain('goal')
-    expect(issuePaths({ goal: 'documents', description: '   ' })).toContain('description')
+    expect(issuePaths({ goal: 'documents' })).toEqual([])
+    expect(IntakeSpecSchema.parse({ goal: 'documents', description: '   ' }).description).toBe('')
     expect(issuePaths({ goal: 'documents', description: 'x'.repeat(301) })).toContain('description')
+  })
+})
+
+describe('IntakeFormSchema (what people submit, D-026)', () => {
+  const formPaths = (input: unknown) => {
+    const res = IntakeFormSchema.safeParse(input)
+    return res.success ? [] : res.error.issues.map((i) => i.path.join('.'))
+  }
+
+  it('requires at least one keyword for non-security goals', () => {
+    expect(formPaths({ goal: 'documents' })).toEqual(['keywords.all'])
+    expect(formPaths({ goal: 'documents', keywords: { all: ['annual report'] } })).toEqual([])
+    expect(
+      formPaths({ goal: 'news_mentions', keywords: { phrases: ['Infosys results'] } }),
+    ).toEqual([])
+  })
+
+  it('reports the missing keyword together with other errors', () => {
+    expect(formPaths({})).toEqual(expect.arrayContaining(['goal', 'keywords.all']))
+    expect(formPaths({ goal: 'hacking', keywords: { all: ['x'] } })).toEqual(['goal'])
+  })
+
+  it('keeps keywords optional for security goals', () => {
+    expect(
+      formPaths({
+        goal: 'exposed_pages',
+        use_case: 'bug_bounty',
+        scope: { domains: ['target.com'] },
+        authorization: { confirmed: true, link: 'https://hackerone.com/t' },
+      }),
+    ).toEqual([])
   })
 })
 

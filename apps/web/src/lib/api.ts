@@ -102,6 +102,9 @@ export const api = {
     request<{
       locations: Array<{ id: number; name: string; canonicalName: string; targetType: string }>
     }>(`/api/locations?country=${encodeURIComponent(country)}&q=${encodeURIComponent(q)}`),
+  /** Every group, ranked: for exports. */
+  getAllResults: (id: string) =>
+    request<{ results: ReportResult[] }>(`/api/runs/${id}/results?limit=200`),
   rateResult: (runId: string, resultId: string, value: Feedback | null) =>
     request<{ feedback: Feedback | null }>(`/api/runs/${runId}/results/${resultId}/feedback`, {
       method: 'POST',

@@ -4,8 +4,8 @@ import {
   COUNTRY_CODES,
   feedbackDelta,
   formatTrackRecord,
+  IntakeFormSchema,
   type IntakeSpec,
-  IntakeSpecSchema,
   isSecurityRun,
   priorityBoosts,
   routeEngines,
@@ -177,7 +177,7 @@ export const createApp = (deps: AppDeps) => {
 
   /** Form validation, no account needed: same schema as the form and the planner (D-005). */
   app.post('/api/spec/validate', async (c) => {
-    const result = IntakeSpecSchema.safeParse(await readJson(c.req))
+    const result = IntakeFormSchema.safeParse(await readJson(c.req))
     return result.success
       ? c.json({ ok: true, spec: result.data })
       : c.json({ ok: false, issues: issuesOf(result.error) }, 422)
@@ -193,7 +193,7 @@ export const createApp = (deps: AppDeps) => {
   /** Validates the spec, picks templates, compiles the plan, stores a `planned` run. */
   app.post('/api/plans', requireUser, async (c) => {
     const user = c.get('user')
-    const parsed = IntakeSpecSchema.safeParse(await readJson(c.req))
+    const parsed = IntakeFormSchema.safeParse(await readJson(c.req))
     if (!parsed.success) return c.json({ ok: false, issues: issuesOf(parsed.error) }, 422)
     const wait = planLimiter.consume(user.id)
     if (wait > 0) {

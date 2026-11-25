@@ -1,5 +1,20 @@
 # Decisions
 
+## D-026 — Simpler form: keywords first, fewer options
+
+- **Date:** 2026-11-25
+- **Status:** Accepted (supersedes parts of D-006 and D-018)
+- **Context:** User feedback: the form was confusing and hard to use.
+- **Decision:**
+  - **Keywords drive the search.** The basic form is Goal, **Keywords** (required except for security goals), an optional Description, Target domains, Country, Time range, Content types, Depth and "Also show results outside my filters".
+  - The required-keyword rule lives in `IntakeFormSchema` (web form and `POST /api/plans` / `spec/validate`), reported together with other errors. `IntakeSpecSchema` stays permissive for specs built in code. The description is optional everywhere.
+  - **Advanced options** ("More options") keep only: domains to exclude, city or region, where keywords appear, extra platforms, results per search, minimum results before widening, and the Hard/Soft/Open toggles.
+  - **Removed from the UI** (still accepted by the API with defaults): perfect result + examples, "what you don't want", subdomain mode, names, results you already have, result languages, "any of" words, exact phrases, engine choice, result types, sites to never show, source preference, output formats, notes. "What is this for?" only appears for security goals.
+  - **Names fall back to keywords:** templates that search for a name (news, mentions, reviews, job posts) use the keywords when no names are given, and then skip the keyword layer so terms aren't repeated.
+  - **Report:** results always show directly; exactly 7 rows are visible and the rest scroll inside the list; "Download all results" offers CSV, JSON and **PDF** below the list. The PDF is built in the browser (jsPDF, loaded on demand) and covers every group. Characters outside Latin-1 print as `?` (jsPDF's built-in fonts). "Group by goal" is gone.
+  - The plan review step stays (cost and exclusions before anything runs).
+- **Consequences:** Intake-Form-Spec.md lists the fields shown; the schema keeps every field so saved runs and API clients keep working.
+
 ## D-025 — Feedback loop
 
 - **Date:** 2026-11-25

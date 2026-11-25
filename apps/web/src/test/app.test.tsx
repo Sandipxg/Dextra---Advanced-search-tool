@@ -1,7 +1,11 @@
 import { screen, waitFor, within } from '@testing-library/react'
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { mockState, resetMockState } from '../mocks/handlers'
 import { renderAt } from './render'
+
+// jsdom can't save files; check what the PDF builder receives instead.
+const pdf = vi.hoisted(() => ({ downloadResultsPdf: vi.fn(async () => {}) }))
+vi.mock('../lib/pdf', () => pdf)
 
 beforeEach(() => {
   resetMockState(true)
@@ -13,7 +17,7 @@ const fillBasic = async (
   goal = 'documents',
 ) => {
   await user.selectOptions(await screen.findByLabelText(/^Goal/), goal)
-  await user.type(screen.getByLabelText(/Describe it/), 'Annual reports and investor presentations')
+  await user.type(screen.getByLabelText(/^Keywords/), 'annual report{Enter}')
   await user.type(
     screen.getByLabelText(/Target domains/),
     'https://www.Example.com/investors/{Enter}',
@@ -24,25 +28,44 @@ describe('intake form', () => {
   it('shows the basic fields only, and more with advanced options on', async () => {
     const { user } = await renderAt('/')
     expect(await screen.findByLabelText(/^Goal/)).toBeInTheDocument()
-    for (const label of [/Describe it/, /Target domains/, /Country to search from/, /Time range/]) {
+    for (const label of [
+      /^Keywords/,
+      /Description \(optional\)/,
+      /Target domains/,
+      /Country to search from/,
+      /Time range/,
+    ]) {
       expect(screen.getByLabelText(label)).toBeInTheDocument()
     }
     expect(screen.getByRole('group', { name: 'Content types' })).toBeInTheDocument()
     expect(screen.getByRole('radiogroup', { name: 'Search depth' })).toBeInTheDocument()
     expect(screen.getByRole('switch', { name: /outside my filters/ })).toBeInTheDocument()
-    expect(screen.queryByRole('heading', { name: /Advanced:/ })).not.toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'More options' })).not.toBeInTheDocument()
     expect(screen.queryByLabelText(/What is this for/)).not.toBeInTheDocument()
 
     await user.click(screen.getByRole('switch', { name: 'Advanced search options' }))
-    expect(screen.getAllByRole('heading', { name: /Advanced:/ })).toHaveLength(3)
-    expect(screen.getByLabelText(/What is this for/)).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'More options' })).toBeInTheDocument()
+    expect(screen.getByLabelText(/Domains to exclude/)).toBeInTheDocument()
+    // Removed in D-026.
+    for (const gone of [
+      /Result languages/,
+      /Exact phrases/,
+      /any one is enough/,
+      /never show/,
+      /Source preference/,
+      /Anything else the tool should know/,
+      /perfect result/,
+    ]) {
+      expect(screen.queryByLabelText(gone)).not.toBeInTheDocument()
+    }
+    expect(screen.queryByText(/^Output$/)).not.toBeInTheDocument()
   })
 
   it('shows schema errors on the right fields', async () => {
     const { user } = await renderAt('/')
     await user.click(await screen.findByRole('button', { name: 'Plan the search' }))
     expect(await screen.findByText('Choose a goal')).toBeInTheDocument()
-    expect(screen.getByText('Describe what you want to find')).toBeInTheDocument()
+    expect(screen.getByText('Add at least one keyword')).toBeInTheDocument()
   })
 
   it('cleans up domains and rejects junk', async () => {
@@ -58,7 +81,7 @@ describe('intake form', () => {
     const { user } = await renderAt('/')
     await user.selectOptions(await screen.findByLabelText(/^Goal/), 'exposed_pages')
     expect(screen.getByRole('heading', { name: 'Authorization' })).toBeInTheDocument()
-    await user.type(screen.getByLabelText(/Describe it/), 'Exposed config files')
+    expect(screen.getByLabelText(/^Keywords/)).not.toBeRequired()
     await user.click(screen.getByRole('button', { name: 'Plan the search' }))
     expect(
       await screen.findByText(/Target domains are required for security work/),
@@ -97,6 +120,17 @@ describe('plan → confirm → report', () => {
       'href',
       expect.stringContaining('format=csv'),
     )
+    expect(screen.getByText(/Showing 7 of 10/)).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'PDF' }))
+    await waitFor(() => expect(pdf.downloadResultsPdf).toHaveBeenCalledTimes(1))
+    const [pdfRun, pdfResults] = pdf.downloadResultsPdf.mock.calls[0] as unknown as [
+      { spec: { keywords: { all: string[] } } },
+      { group: string }[],
+    ]
+    expect(pdfRun.spec.keywords.all).toEqual(['annual report'])
+    // Every group goes into the PDF, not only the visible tab.
+    expect(new Set(pdfResults.map((r) => r.group))).toEqual(new Set(['main', 'outside']))
 
     await user.click(within(groups).getByRole('radio', { name: /Outside scope/ }))
     expect(

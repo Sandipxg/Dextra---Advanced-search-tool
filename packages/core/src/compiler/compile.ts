@@ -146,8 +146,13 @@ const compileTemplate = (
   const uses = (v: 'name' | 'domain' | 'keywords') => template.vars.includes(v)
 
   // Vars (D-008): filled by code from the spec only.
-  const names = spec.scope.names.slice(0, MAX_VAR_FANOUT)
-  if (uses('name') && names.length === 0) return { drop: 'needs names or brands (B4)' }
+  // No names given (the form no longer asks, D-026): name templates use the keywords and
+  // phrases instead, and then skip the keyword layer so terms aren't repeated.
+  const namesFromKeywords = uses('name') && spec.scope.names.length === 0
+  const names = (
+    namesFromKeywords ? [...spec.keywords.all, ...spec.keywords.phrases] : spec.scope.names
+  ).slice(0, MAX_VAR_FANOUT)
+  if (uses('name') && names.length === 0) return { drop: 'needs names, brands or keywords' }
   if (uses('domain') && domains.length === 0) return { drop: 'needs target domains (B1)' }
   const keywordsVar = compileKeywordsVar(spec.keywords)
   if (uses('keywords') && !keywordsVar) return { drop: 'needs keywords (D2–D4)' }
@@ -234,7 +239,8 @@ const compileTemplate = (
   if (content && contentFilter.mode === 'soft') soft.push('content')
 
   // Keywords + exclusions.
-  const keywords = uses('keywords') ? '' : compileRequiredKeywords(spec.keywords)
+  const keywords =
+    uses('keywords') || namesFromKeywords ? '' : compileRequiredKeywords(spec.keywords)
   const excludedHosts = [
     ...new Set([...spec.scope.exclude_domains, ...spec.sources.never].map(baseHost)),
   ]
