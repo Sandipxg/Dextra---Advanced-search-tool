@@ -1,4 +1,4 @@
-export { buildPlan, pickEngine } from './compile'
+export { type BuildPlanOptions, buildPlan, pickEngine } from './compile'
 export { compileExcludedTerms, compileKeywordsVar, compileRequiredKeywords } from './keywords'
 export { type Selection, SelectionSchema, validateSelection } from './selection'
 export * from './tokens'

@@ -26,6 +26,8 @@ export interface SelectorOptions {
   model?: string
   /** Picking from enums is a simple task, so `low` keeps it fast and cheap. */
   effort?: 'low' | 'medium' | 'high' | 'xhigh' | 'max'
+  /** `formatTrackRecord(...)` for the spec's goal (T-011); omitted when empty. */
+  trackRecord?: string
 }
 
 export interface SelectorResult {
@@ -59,6 +61,7 @@ const attempt = async (
   spec: IntakeSpec,
   model: string,
   effort: NonNullable<SelectorOptions['effort']>,
+  trackRecord: string,
 ): Promise<Attempt> => {
   try {
     const response = await client.messages.parse({
@@ -68,7 +71,7 @@ const attempt = async (
       system: [
         { type: 'text', text: SELECTOR_SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } },
       ],
-      messages: [{ role: 'user', content: buildSelectorUserMessage(spec) }],
+      messages: [{ role: 'user', content: buildSelectorUserMessage(spec, trackRecord) }],
       output_config: { format: zodOutputFormat(SelectorOutputSchema), effort },
     })
     if (response.stop_reason === 'refusal') {
@@ -125,7 +128,7 @@ export const selectTemplates = async (
 
   let result: Attempt = { ok: false, reason: 'not attempted', retry: true }
   for (let i = 0; i < MAX_ATTEMPTS && !result.ok; i++) {
-    result = await attempt(client, spec, model, effort)
+    result = await attempt(client, spec, model, effort, options.trackRecord ?? '')
     if (!result.ok && !result.retry) break
   }
   if (!result.ok) return rulesResult(spec, [`Used default picks because ${result.reason}.`])

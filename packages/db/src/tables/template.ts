@@ -21,5 +21,6 @@ export const TemplateStatTable = defineTable('template_stat', (t) => ({
   results: t.integer().default(0),
   inScope: t.integer().default(0),
   useful: t.integer().default(0),
+  notUseful: t.integer().default(0),
   ...t.timestamps(),
 })).unique(['templateId', 'engine', 'goal'])

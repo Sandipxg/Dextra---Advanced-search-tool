@@ -2,12 +2,16 @@ import {
   applyExclusions,
   buildPlan,
   COUNTRY_CODES,
+  feedbackDelta,
+  formatTrackRecord,
   type IntakeSpec,
   IntakeSpecSchema,
   isSecurityRun,
+  priorityBoosts,
   routeEngines,
   type ScoredResult,
   type SearchFn,
+  summarizeStats,
   toCsv,
 } from '@dextra/core'
 import type { Db, ResultRow, RunRow } from '@dextra/db'
@@ -25,7 +29,7 @@ import { createRateLimiter } from './rate-limit'
 export interface AppDeps {
   db: Db
   auth: Auth
-  select: (spec: IntakeSpec) => Promise<SelectorResult>
+  select: (spec: IntakeSpec, context: { trackRecord: string }) => Promise<SelectorResult>
   /** SERP search for the runner (`createSearch(providers)` in production). */
   search: SearchFn
   webOrigin: string
@@ -96,6 +100,10 @@ const ResultsQuerySchema = z.object({
   offset: z.coerce.number().int().min(0).default(0),
 })
 const ExportQuerySchema = z.object({ format: z.enum(['csv', 'json']) })
+const FeedbackSchema = z.strictObject({ value: z.enum(['useful', 'not_useful']).nullable() })
+
+/** What the report page needs per result: the scored fields plus id and rating. */
+const toReportItem = (r: ResultRow) => ({ ...toScored(r), id: r.id, feedback: r.feedback })
 
 const ConfirmSchema = z.strictObject({
   exclusions: z
@@ -120,6 +128,34 @@ export const createApp = (deps: AppDeps) => {
     ((task: Promise<void>) => {
       task.catch((err: unknown) => logger.error({ err }, 'background task failed'))
     })
+
+  /** What past ratings and scope rates say about this goal's templates (T-011). */
+  const learned = async (goal: string) => {
+    const rows = await db.templateStat
+      .select(
+        'templateId',
+        'engine',
+        'goal',
+        'queries',
+        'results',
+        'inScope',
+        'useful',
+        'notUseful',
+      )
+      .where({ goal })
+    const records = summarizeStats(rows)
+    const boosts = priorityBoosts(records)
+    const up = Object.keys(boosts).filter((id) => (boosts[id] ?? 0) > 0)
+    const down = Object.keys(boosts).filter((id) => (boosts[id] ?? 0) < 0)
+    const notes = [
+      ...(up.length ? [`Ranked higher from past ratings: ${up.join(', ')}`] : []),
+      ...(down.length
+        ? [`Ranked lower from past ratings or off-scope results: ${down.join(', ')}`]
+        : []),
+    ]
+    return { boosts, trackRecord: formatTrackRecord(records), notes }
+  }
+
   const app = new Hono<Env>()
 
   // Request log: method, path, status, duration. Never bodies, cookies or headers.
@@ -166,9 +202,10 @@ export const createApp = (deps: AppDeps) => {
     }
 
     const spec = parsed.data
-    const selection = await deps.select(spec)
+    const evidence = await learned(spec.goal)
+    const selection = await deps.select(spec, { trackRecord: evidence.trackRecord })
     const route = routeEngines(spec, selection.extraEngine)
-    const plan = buildPlan(spec, selection.selections)
+    const plan = buildPlan(spec, selection.selections, { boosts: evidence.boosts })
     const run = await db.run.create({
       userId: user.id,
       status: 'planned',
@@ -176,7 +213,7 @@ export const createApp = (deps: AppDeps) => {
       selectorSource: selection.source,
       selections: selection.selections,
       plan,
-      notes: [...selection.notes, ...route.notes],
+      notes: [...selection.notes, ...route.notes, ...evidence.notes],
       proposedExclusions: selection.exclusions,
       followUpQuestion: selection.followUpQuestion,
     })
@@ -212,7 +249,7 @@ export const createApp = (deps: AppDeps) => {
       const applied = applyExclusions(spec, ex)
       spec = applied.spec
       skipped = applied.skipped
-      plan = buildPlan(spec, run.selections)
+      plan = buildPlan(spec, run.selections, { boosts: (await learned(spec.goal)).boosts })
     }
 
     const confirmedAt = new Date()
@@ -251,8 +288,55 @@ export const createApp = (deps: AppDeps) => {
       ok: true,
       status: run.status,
       stats: run.stats,
-      results: results.map(toScored),
+      results: results.map(toReportItem),
     })
+  })
+
+  /**
+   * The run owner rates one result (T-011). The rating and the per-template counters of
+   * every template that found it change together; changing or clearing a rating undoes the
+   * old one.
+   */
+  app.post('/api/runs/:id/results/:resultId/feedback', requireUser, async (c) => {
+    const run = await ownRun(c.get('user').id, c.req.param('id'))
+    const body = FeedbackSchema.safeParse(await readJson(c.req))
+    if (!body.success) return c.json({ ok: false, issues: issuesOf(body.error) }, 422)
+    const resultId = c.req.param('resultId')
+    if (!z.uuid().safeParse(resultId).success)
+      throw new HTTPException(404, { message: 'Result not found' })
+    const result = await db.result.findByOptional({ id: resultId })
+    if (!result || result.runId !== run.id)
+      throw new HTTPException(404, { message: 'Result not found' })
+
+    const next = body.data.value
+    const delta = feedbackDelta(result.feedback, next)
+    if (delta.useful !== 0 || delta.notUseful !== 0) {
+      await db.$transaction(async () => {
+        await db.result
+          .find(result.id)
+          .update({ feedback: next, feedbackAt: next ? new Date() : null })
+        for (const templateId of result.templateIds) {
+          const engine =
+            run.plan.queries.find(
+              (q) => q.templateId === templateId && result.queryKeys.includes(q.key),
+            )?.engine ?? 'google'
+          const where = { templateId, engine, goal: run.spec.goal }
+          const existing = await db.templateStat.where(where).takeOptional()
+          if (existing) {
+            await db.templateStat
+              .where(where)
+              .increment({ useful: delta.useful, notUseful: delta.notUseful })
+          } else {
+            await db.templateStat.create({
+              ...where,
+              useful: Math.max(0, delta.useful),
+              notUseful: Math.max(0, delta.notUseful),
+            })
+          }
+        }
+      })
+    }
+    return c.json({ ok: true, feedback: next })
   })
 
   /** F5 exports: every result of a finished run as CSV or JSON. */

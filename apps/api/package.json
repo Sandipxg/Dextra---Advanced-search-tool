@@ -9,7 +9,8 @@
     "typecheck": "tsc -p tsconfig.json",
     "test": "vitest run",
     "migrate:auth": "tsx src/migrate-auth.ts",
-    "try-run": "tsx scripts/try-run.ts"
+    "try-run": "tsx scripts/try-run.ts",
+    "template-report": "tsx scripts/template-report.ts"
   },
   "dependencies": {
     "@dextra/core": "workspace:*",

@@ -30,7 +30,7 @@ const app = createApp({
         ? { clientId: env.GITHUB_CLIENT_ID, clientSecret: env.GITHUB_CLIENT_SECRET }
         : undefined,
   }),
-  select: (spec) => selectTemplates(spec),
+  select: (spec, { trackRecord }) => selectTemplates(spec, { trackRecord }),
   search: createSearch(createProviders(env)),
   webOrigin: env.WEB_ORIGIN,
   logger,

@@ -22,4 +22,7 @@ export const ResultTable = defineTable('result', (t) => ({
   templateIds: t.json<string[]>(),
   goal: t.text(),
   signal: t.text(),
+  /** The run owner's rating (T-011); null until rated. */
+  feedback: t.enum('result_feedback', ['useful', 'not_useful']).nullable(),
+  feedbackAt: t.timestamp().nullable(),
 })).unique(['runId', 'key'])

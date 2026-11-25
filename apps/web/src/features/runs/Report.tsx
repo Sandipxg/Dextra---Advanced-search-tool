@@ -1,9 +1,11 @@
 import type { ScoredResult } from '@dextra/core'
-import { useQuery } from '@tanstack/react-query'
-import { Download, ExternalLink } from 'lucide-react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { Download, ExternalLink, ThumbsDown, ThumbsUp } from 'lucide-react'
 import { useState } from 'react'
+import { toast } from 'sonner'
 import { Badge, Card, Segmented } from '../../components/ui'
-import { api, type RunSummary } from '../../lib/api'
+import { api, type Feedback, type ReportResult, type RunSummary } from '../../lib/api'
+import { cn } from '../../lib/cn'
 import { GOAL_LABELS } from '../../lib/labels'
 
 type Group = ScoredResult['group']
@@ -31,7 +33,54 @@ const hostOf = (url: string) => {
   }
 }
 
-const ResultItem = ({ r, rank }: { r: ScoredResult; rank: number }) => {
+/** Useful / not useful (T-011). Clicking the active button again clears the rating. */
+const RateButtons = ({
+  value,
+  onRate,
+  title,
+}: {
+  value: Feedback | null
+  onRate: (value: Feedback | null) => void
+  title: string
+}) => (
+  <div className="flex shrink-0 gap-1">
+    {(
+      [
+        ['useful', 'Useful', ThumbsUp],
+        ['not_useful', 'Not useful', ThumbsDown],
+      ] as const
+    ).map(([v, label, Icon]) => (
+      <button
+        key={v}
+        type="button"
+        aria-pressed={value === v}
+        aria-label={`${label}: ${title}`}
+        title={label}
+        onClick={() => onRate(value === v ? null : v)}
+        className={cn(
+          'rounded-md border p-1.5 transition-colors',
+          value === v
+            ? v === 'useful'
+              ? 'border-ok bg-ok-soft text-ok'
+              : 'border-danger bg-danger-soft text-danger'
+            : 'border-border text-muted hover:text-text',
+        )}
+      >
+        <Icon className="size-4" aria-hidden />
+      </button>
+    ))}
+  </div>
+)
+
+const ResultItem = ({
+  r,
+  rank,
+  onRate,
+}: {
+  r: ReportResult
+  rank: number
+  onRate: (value: Feedback | null) => void
+}) => {
   const href = safeHref(r.url)
   return (
     <li className="border-b border-border py-4 last:border-0">
@@ -67,6 +116,7 @@ const ResultItem = ({ r, rank }: { r: ScoredResult; rank: number }) => {
             <Badge>score {r.score}</Badge>
           </div>
         </div>
+        <RateButtons value={r.feedback} onRate={onRate} title={r.title || hostOf(r.url)} />
       </div>
     </li>
   )
@@ -83,12 +133,36 @@ export const Report = ({ run }: { run: RunSummary }) => {
   })
   const list = results.data?.results ?? []
 
+  const queryClient = useQueryClient()
+  const rate = useMutation({
+    mutationFn: ({ id, value }: { id: string; value: Feedback | null }) =>
+      api.rateResult(run.id, id, value),
+    // Show the rating at once; roll back if the server refuses it.
+    onMutate: ({ id, value }) => {
+      const key = ['results', run.id, group]
+      const previous = queryClient.getQueryData<{ results: ReportResult[] }>(key)
+      queryClient.setQueryData<{ results: ReportResult[] }>(key, (old) =>
+        old
+          ? {
+              ...old,
+              results: old.results.map((r) => (r.id === id ? { ...r, feedback: value } : r)),
+            }
+          : old,
+      )
+      return { previous, key }
+    },
+    onError: (_error, _vars, context) => {
+      if (context?.previous) queryClient.setQueryData(context.key, context.previous)
+      toast.error('Could not save your rating')
+    },
+  })
+
   const groups = (['main', 'outside', 'unverified'] as const).filter(
     (g) => g === 'main' || (stats?.[g] ?? 0) > 0,
   )
   const buckets = byGoal
     ? Object.entries(
-        list.reduce<Record<string, ScoredResult[]>>((acc, r) => {
+        list.reduce<Record<string, ReportResult[]>>((acc, r) => {
           const bucket = acc[r.goal] ?? []
           bucket.push(r)
           acc[r.goal] = bucket
@@ -152,7 +226,9 @@ export const Report = ({ run }: { run: RunSummary }) => {
           </label>
         )}
       </div>
-      <p className="text-sm text-muted">{GROUP_HINTS[group]}</p>
+      <p className="text-sm text-muted">
+        {GROUP_HINTS[group]} Rate results with 👍 / 👎 to improve future searches.
+      </p>
 
       <Card className="py-1">
         {results.isPending ? (
@@ -169,7 +245,12 @@ export const Report = ({ run }: { run: RunSummary }) => {
               )}
               <ol>
                 {items.map((r, i) => (
-                  <ResultItem key={r.key} r={r} rank={i + 1} />
+                  <ResultItem
+                    key={r.key}
+                    r={r}
+                    rank={i + 1}
+                    onRate={(value) => rate.mutate({ id: r.id, value })}
+                  />
                 ))}
               </ol>
             </div>

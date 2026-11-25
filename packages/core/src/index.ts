@@ -1,4 +1,5 @@
 export * from './compiler/index'
+export * from './feedback/index'
 export * from './guardrails/index'
 export * from './runner/index'
 export * from './schema/content-types'

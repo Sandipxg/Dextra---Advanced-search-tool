@@ -19,7 +19,7 @@ Design so far was done in a claude.ai chat on 2026-11-25. Everything decided the
 - **Scope is enforced in code, not in the prompt.** Reject any query whose `site:` is neither in the user's scope list nor in the `platform` enum of the template that produced it (D-007). Security goals force domain scope to Hard and require the authorization field.
 - **No proxy rotation or scraping Google directly.** All search goes through a SERP API.
 - Stack: see D-014. Check the personal-preferences skill before adding libraries.
-- Commands: `pnpm install`, `pnpm check` (lint + typecheck + test), `pnpm format`, `pnpm db:setup` (Better Auth tables + migrations + template seed), `pnpm --filter @dextra/api dev`, `pnpm --filter @dextra/web dev` (proxies `/api` to :3000) or `pnpm --filter @dextra/web dev:mock` (no API needed). Run `pnpm check` before every commit.
+- Commands: `pnpm install`, `pnpm check` (lint + typecheck + test), `pnpm format`, `pnpm db:setup` (Better Auth tables + migrations + template seed), `pnpm --filter @dextra/api dev`, `pnpm --filter @dextra/web dev` (proxies `/api` to :3000) or `pnpm --filter @dextra/web dev:mock` (no API needed), `pnpm --filter @dextra/api template-report` (template evidence for library review). Run `pnpm check` before every commit.
 - Database migrations are hand-written (`pnpm --filter @dextra/db db new <name>`). Never run `db g`: it would drop Better Auth's tables.
 - Internal packages export TS source (`./src/index.ts`); no default exports (Biome rule).
 - After editing `docs/Template-Library.md`, run `pnpm --filter @dextra/core gen:templates` and commit both files; a test fails if they drift.

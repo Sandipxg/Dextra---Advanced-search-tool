@@ -25,6 +25,8 @@ interface MockState {
   user: { id: string; email: string; name: string } | null
   runs: Map<string, RunSummary>
   results: Map<string, ScoredResult[]>
+  /** `${runId}:${resultId}` → rating. */
+  feedback: Map<string, 'useful' | 'not_useful'>
   /** Delay before a confirmed run finishes (ms). */
   runDelay: number
   /** Called when the fake user signs in or out (demo mode keeps it across reloads). */
@@ -35,6 +37,7 @@ export const mockState: MockState = {
   user: null,
   runs: new Map(),
   results: new Map(),
+  feedback: new Map(),
   runDelay: 1500,
 }
 
@@ -42,7 +45,16 @@ export const resetMockState = (signedIn = false) => {
   mockState.user = signedIn ? { id: 'user-1', email: 'demo@example.test', name: 'Demo User' } : null
   mockState.runs.clear()
   mockState.results.clear()
+  mockState.feedback.clear()
 }
+
+/** Stable, path-safe id for a mock result (keys contain slashes). */
+const resultId = (r: ScoredResult) => r.key.replace(/[^a-z0-9]/gi, '-')
+const withRating = (runId: string, r: ScoredResult) => ({
+  ...r,
+  id: resultId(r),
+  feedback: mockState.feedback.get(`${runId}:${resultId(r)}`) ?? null,
+})
 
 const sessionBody = () =>
   mockState.user
@@ -246,8 +258,20 @@ export const handlers = [
     return HttpResponse.json({
       ok: true,
       stats: run?.stats ?? null,
-      results: group ? all.filter((r) => r.group === group) : all,
+      results: (group ? all.filter((r) => r.group === group) : all).map((r) =>
+        withRating(String(params.id), r),
+      ),
     })
+  }),
+
+  http.post('*/api/runs/:id/results/:resultId/feedback', async ({ params, request }) => {
+    const denied = needUser()
+    if (denied) return denied
+    const { value } = (await request.json()) as { value: 'useful' | 'not_useful' | null }
+    const key = `${String(params.id)}:${String(params.resultId)}`
+    if (value) mockState.feedback.set(key, value)
+    else mockState.feedback.delete(key)
+    return HttpResponse.json({ ok: true, feedback: value })
   }),
 
   http.get('*/api/runs/:id/export', ({ params, request }) => {

@@ -35,6 +35,11 @@ export interface RunSummary {
   error: string | null
 }
 
+export type Feedback = 'useful' | 'not_useful'
+
+/** A stored result as the report receives it. */
+export type ReportResult = ScoredResult & { id: string; feedback: Feedback | null }
+
 export interface RunListItem {
   id: string
   status: RunStatus
@@ -90,12 +95,17 @@ export const api = {
   getRun: (id: string) => request<{ run: RunSummary }>(`/api/runs/${id}`),
   listRuns: () => request<{ runs: RunListItem[] }>('/api/runs'),
   getResults: (id: string, group: ScoredResult['group']) =>
-    request<{ results: ScoredResult[]; stats: RunStats | null }>(
+    request<{ results: ReportResult[]; stats: RunStats | null }>(
       `/api/runs/${id}/results?group=${group}&limit=200`,
     ),
   locations: (country: string, q: string) =>
     request<{
       locations: Array<{ id: number; name: string; canonicalName: string; targetType: string }>
     }>(`/api/locations?country=${encodeURIComponent(country)}&q=${encodeURIComponent(q)}`),
+  rateResult: (runId: string, resultId: string, value: Feedback | null) =>
+    request<{ feedback: Feedback | null }>(`/api/runs/${runId}/results/${resultId}/feedback`, {
+      method: 'POST',
+      body: JSON.stringify({ value }),
+    }),
   exportUrl: (id: string, format: 'csv' | 'json') => `/api/runs/${id}/export?format=${format}`,
 }

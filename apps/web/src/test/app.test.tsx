@@ -104,6 +104,24 @@ describe('plan → confirm → report', () => {
     ).not.toHaveLength(0)
   })
 
+  it('rates a result and clears the rating on a second click (T-011)', async () => {
+    const { user } = await renderAt('/')
+    await fillBasic(user)
+    await user.click(screen.getByRole('button', { name: 'Plan the search' }))
+    await user.click(await screen.findByRole('button', { name: /Confirm and run/ }))
+    await screen.findByRole('heading', { name: 'Search results' })
+
+    const [useful] = await screen.findAllByRole('button', { name: /^Useful:/ })
+    expect(useful).toHaveAttribute('aria-pressed', 'false')
+    await user.click(useful as HTMLElement)
+    await waitFor(() => expect(useful).toHaveAttribute('aria-pressed', 'true'))
+    expect([...mockState.feedback.values()]).toEqual(['useful'])
+
+    await user.click(useful as HTMLElement)
+    await waitFor(() => expect(useful).toHaveAttribute('aria-pressed', 'false'))
+    expect(mockState.feedback.size).toBe(0)
+  })
+
   it('plans with advanced options on (number fields keep their defaults)', async () => {
     const { user } = await renderAt('/')
     await user.click(await screen.findByRole('switch', { name: 'Advanced search options' }))

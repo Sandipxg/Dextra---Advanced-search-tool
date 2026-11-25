@@ -1,5 +1,19 @@
 # Decisions
 
+## D-025 — Feedback loop
+
+- **Date:** 2026-11-25
+- **Status:** Accepted
+- **Context:** Phase 10 (T-011, T-012). Learn which templates work without letting data rewrite the library (D-002).
+- **Decision:**
+  - **Ratings:** the run owner rates any result useful / not useful (click again to clear). The rating and the `useful` / `not_useful` counters of every template that found the result change in one transaction; changing a rating undoes the old one.
+  - **Evidence:** per template (summed over engines, per goal): Laplace-smoothed useful rate `(useful + 1) / (ratings + 2)` and the share of results in scope. Ratings count from 5, scope rates from 20 results.
+  - **Use in planning:** `priorityBoosts` nudges the order in which the budget keeps queries: +0.5 for well-rated (≥ 70%), −0.5 for poorly rated (≤ 30%), −0.5 when the engine keeps returning off-scope results (< 50%); range −1 … +0.5. Library priorities never change. The plan's notes say which templates moved. The Claude selector also gets a short track record for the goal in its user message.
+  - **Human review:** `pnpm --filter @dextra/api template-report [--write]` prints per-template evidence and suggestions (retire/rework, promote, tighten scope, too narrow). Changes to `Template-Library.md` stay manual.
+  - **T-012:** the report compares how often outside-scope vs main results are rated useful. With 20+ outside-scope ratings: keep the fixed ~20% batch if outside results are at least half as useful as main ones, otherwise switch to shortfall-only. Until then the fixed batch stays.
+  - Engine routing is unchanged (only Google is enabled); stats are already kept per engine for when more are.
+- **Consequences:** Feedback only exists for signed-in owners of a run; one person's ratings shape their own and others' orderings for the same goal (single-tenant for now).
+
 ## D-024 — Web app
 
 - **Date:** 2026-11-25

@@ -16,8 +16,7 @@ _None_
 ## 🧊 Backlog
 
 - [ ] T-008 Cached SERP API locations list for the city dropdown — UI done (city combobox reads `/api/locations`); sync script to fill `serp_location` still to do
-- [ ] T-011 Feedback loop: useful-hit rate per template and engine
-- [ ] T-012 Decide fixed ~20% outside-scope budget vs only-on-shortfall (open in D-003)
+- [ ] T-012 Decide fixed ~20% outside-scope budget vs only-on-shortfall (open in D-003) — measurement in place (`template-report`, D-025); decide once there are 20+ outside-scope ratings
 
 ## ⛔ Blocked
 
@@ -25,6 +24,7 @@ _None_
 
 ## ✅ Done (recent)
 
+- [x] T-011 Feedback loop: result ratings, template counters, learned ordering nudges, selector track record, review report (D-025) (2026-11-25)
 - [x] T-014 Local Postgres 18: `dextra` + `dextra_test` created, migrated, seeded; all 11 API tests pass; full stack checked in the browser with 2 real SerpAPI searches (2026-11-25)
 - [x] T-007 Web app: intake form (basic + advanced + security), pre-run summary, progress, report with groups and exports, demo mode (D-024) (2026-11-25)
 - [x] T-016 Rule-based picks follow the request: opt-in templates need a matching word, mentioned param values win (2026-11-25)

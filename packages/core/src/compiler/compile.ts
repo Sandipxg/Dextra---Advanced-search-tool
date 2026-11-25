@@ -323,11 +323,23 @@ const widen = (c: Candidate): Omit<PlannedQuery, 'key' | 'batch'> => {
   }
 }
 
+export interface BuildPlanOptions {
+  /**
+   * Learned ordering nudges per template (`priorityBoosts`, T-011), subtracted from the
+   * library priority when the budget decides what runs. Library priorities never change.
+   */
+  boosts?: Readonly<Record<string, number>>
+}
+
 /**
  * Turns the spec + template selections into a guarded, budgeted plan. Pure: no I/O.
  * Every query in the result has passed `checkQuery`.
  */
-export const buildPlan = (spec: IntakeSpec, selections: readonly Selection[]): Plan => {
+export const buildPlan = (
+  spec: IntakeSpec,
+  selections: readonly Selection[],
+  options: BuildPlanOptions = {},
+): Plan => {
   const dropped: DroppedTemplate[] = []
   const rejected: RejectedQuery[] = []
   const pool: Candidate[] = []
@@ -372,7 +384,9 @@ export const buildPlan = (spec: IntakeSpec, selections: readonly Selection[]): P
   // Budget (F1) with priority order, then cross-goal cap (D-010).
   const budget = DEPTH_BUDGET[spec.depth.level]
   const crossCap = Math.floor(budget * CROSS_GOAL_SHARE)
-  const sorted = [...pool].sort((a, b) => a.query.priority - b.query.priority || a.order - b.order)
+  const boosts = options.boosts ?? {}
+  const rank = (c: Candidate) => c.query.priority - (boosts[c.query.templateId] ?? 0)
+  const sorted = [...pool].sort((a, b) => rank(a) - rank(b) || a.order - b.order)
   const kept: Candidate[] = []
   const overBudget = new Map<string, number>()
   let cross = 0

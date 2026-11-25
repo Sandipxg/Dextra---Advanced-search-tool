@@ -272,6 +272,86 @@ describe.skipIf(!url)('API (needs DATABASE_TEST_URL)', () => {
     expect(stats.queries).toBeGreaterThan(0)
   })
 
+  it('rates results, keeps template counters in step, and only for the owner (T-011)', async () => {
+    const cookie = await signUp()
+    const { body } = await plan(cookie)
+    const id = body.run.id
+    tasks.length = 0
+    await call(`/api/runs/${id}/confirm`, { method: 'POST', cookie, body: '{}' })
+    await Promise.all(tasks)
+    const { results } = (await (
+      await call(`/api/runs/${id}/results?group=main`, { cookie })
+    ).json()) as {
+      results: { id: string; feedback: string | null; templateIds: string[] }[]
+    }
+    const target = results[0] as { id: string; feedback: string | null; templateIds: string[] }
+    expect(target.feedback).toBeNull()
+    const templateId = target.templateIds[0] as string
+    const counters = async () => {
+      const s = await db.templateStat
+        .where({ templateId, engine: 'google', goal: 'documents' })
+        .take()
+      return { useful: s.useful, notUseful: s.notUseful }
+    }
+    const rate = (value: string | null, who = cookie) =>
+      call(`/api/runs/${id}/results/${target.id}/feedback`, {
+        method: 'POST',
+        cookie: who,
+        body: JSON.stringify({ value }),
+      })
+
+    const before = await counters()
+    expect((await rate('useful')).status).toBe(200)
+    expect(await counters()).toEqual({ useful: before.useful + 1, notUseful: before.notUseful })
+    expect((await db.result.find(target.id)).feedback).toBe('useful')
+
+    await rate('useful') // same rating again: no double count
+    expect(await counters()).toEqual({ useful: before.useful + 1, notUseful: before.notUseful })
+
+    await rate('not_useful')
+    expect(await counters()).toEqual({ useful: before.useful, notUseful: before.notUseful + 1 })
+
+    await rate(null)
+    expect(await counters()).toEqual(before)
+    expect((await db.result.find(target.id)).feedback).toBeNull()
+
+    const reloaded = (await (
+      await call(`/api/runs/${id}/results?group=main`, { cookie })
+    ).json()) as {
+      results: { id: string; feedback: string | null }[]
+    }
+    expect(reloaded.results.find((r) => r.id === target.id)?.feedback).toBeNull()
+
+    expect((await rate('great')).status).toBe(422)
+    expect((await rate('useful', await signUp())).status).toBe(404)
+    expect(
+      (
+        await call(`/api/runs/${id}/results/00000000-0000-4000-8000-000000000000/feedback`, {
+          method: 'POST',
+          cookie,
+          body: JSON.stringify({ value: 'useful' }),
+        })
+      ).status,
+    ).toBe(404)
+  })
+
+  it('uses past ratings when planning (T-011)', async () => {
+    const where = { templateId: 'co_key_pages', engine: 'google', goal: 'company_research' }
+    const existing = await db.templateStat.where(where).takeOptional()
+    if (existing) await db.templateStat.where(where).update({ useful: 20, notUseful: 0 })
+    else await db.templateStat.create({ ...where, useful: 20, notUseful: 0 })
+
+    const cookie = await signUp()
+    const { body } = await plan(cookie, {
+      goal: 'company_research',
+      description: 'Leadership and investor pages',
+      scope: { domains: ['target.com'] },
+    })
+    expect(body.run.notes).toEqual(
+      expect.arrayContaining(['Ranked higher from past ratings: co_key_pages']),
+    )
+  })
+
   it('marks a run failed when every search fails, without leaking details', async () => {
     const failing = createApp({
       db,

@@ -169,6 +169,8 @@ This is the safety boundary; build it **before** the LLM.
 
 ## Phase 10 — Feedback loop (T-011, T-012, later)
 
+> ✅ Done 2026-11-25 on `feat/phase10-feedback` (D-025). T-012 decided by data later.
+
 - "Useful / not useful" per result → `template_stats` hit rate per template × engine × goal.
 - Feed hit rates into engine router goal defaults and template priority.
 - Propose new template variants from data for human review (never auto-added, D-002).
