@@ -10,7 +10,7 @@ export const AuthPage = () => {
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
 
-  if (session.data) return <Navigate to="/" replace />
+  if (session.data?.user) return <Navigate to="/" replace />
 
   const submit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
