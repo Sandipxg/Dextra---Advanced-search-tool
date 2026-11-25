@@ -1,3 +1,4 @@
+import { isIntentWord } from '../compiler/tokens'
 import type { WidenableFilter } from '../compiler/types'
 import { isInScopeHost } from '../guardrails/query-guard'
 import { checkResult } from '../guardrails/result-guard'
@@ -17,6 +18,15 @@ export const OUTSIDE_LABELS: Record<WidenableFilter, string> = {
 }
 export const ENGINE_IGNORED_SCOPE = 'The search engine ignored your domain filter'
 export const UNVERIFIED = 'Not in your scope: unverified, not searched further'
+/** Shown on a result that is missing one or more of the required keywords (T-023). */
+export const LOOSE_MATCH = 'May not match your keywords'
+
+/** Lowercase, keep alphanumerics, collapse the rest to single spaces (padded for word-ish matching). */
+const normalizeText = (text: string): string =>
+  ` ${text
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim()} `
 
 const COMMUNITY_HOSTS = [
   'reddit.com',
@@ -147,6 +157,18 @@ export const scoreResults = (spec: IntakeSpec, hits: readonly Hit[]): ScoredResu
   }
 
   const anyTerms = spec.keywords.any.map((t) => t.toLowerCase())
+  // Required keywords (D2/D4), minus intent words: every result is expected to contain them.
+  const requiredTerms = [
+    ...spec.keywords.all.filter((t) => !isIntentWord(t)),
+    ...spec.keywords.phrases,
+  ]
+    .map((t) =>
+      t
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, ' ')
+        .trim(),
+    )
+    .filter(Boolean)
   const openExts =
     spec.filters.content.mode === 'open'
       ? new Set(spec.filters.content.value.flatMap((c) => CONTENT_TYPE_EXTENSIONS[c]))
@@ -170,9 +192,26 @@ export const scoreResults = (spec: IntakeSpec, hits: readonly Hit[]): ScoredResu
     return b
   }
 
+  // Relevance by keyword coverage (T-023): reward each required keyword present in the
+  // title/snippet/URL and demote results that miss one, so an off-topic page the dork
+  // mechanically matched sinks below a relevant one. A result missing any required keyword
+  // is flagged for the reader.
+  const keywordScore = (r: Omit<ScoredResult, 'score'>): number => {
+    if (!requiredTerms.length) return 0
+    const hay = normalizeText(`${r.title} ${r.snippet} ${r.url}`)
+    const missing = requiredTerms.filter((t) => !hay.includes(` ${t} `))
+    if (missing.length && !r.reasons.includes(LOOSE_MATCH)) r.reasons = [...r.reasons, LOOSE_MATCH]
+    return 4 * (requiredTerms.length - missing.length) - 16 * missing.length
+  }
+
   const scored = [...entries.values()].map(({ result, rankPoints }) => {
     const signalPoints = result.signal === 'match' ? 5 : result.signal === 'miss' ? -5 : 0
-    const score = 10 * result.queryKeys.length + rankPoints + signalPoints + bonus(result)
+    const score =
+      10 * result.queryKeys.length +
+      rankPoints +
+      signalPoints +
+      bonus(result) +
+      keywordScore(result)
     return { ...result, score: Math.round(score * 10) / 10 }
   })
 

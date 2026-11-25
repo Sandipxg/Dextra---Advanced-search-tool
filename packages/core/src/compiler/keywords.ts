@@ -1,5 +1,5 @@
 import type { IntakeSpec } from '../schema/intake-spec'
-import { cleanText, join, orGroup, phrase, term } from './tokens'
+import { cleanText, isIntentWord, join, orGroup, phrase, term } from './tokens'
 
 type Keywords = IntakeSpec['keywords']
 
@@ -18,7 +18,9 @@ export const compileRequiredKeywords = (k: Keywords): string => {
     }
     return value
   }
-  return join(...k.all.map((t) => place(t, false)), ...k.phrases.map((t) => place(t, true)))
+  // Intent words ("download", "free", …) add noise, so they never enter the AND layer.
+  const terms = k.all.filter((t) => !isIntentWord(t))
+  return join(...terms.map((t) => place(t, false)), ...k.phrases.map((t) => place(t, true)))
 }
 
 /** `{keywords}` var: D2 + D4 + D3 as `(a OR b)`. Empty when the user gave none. */

@@ -212,10 +212,44 @@ describe('media searches (D-028)', () => {
   it('opts in from media words and stays out of plain document searches', () => {
     expect(ids({ keywords: { all: ['shiddat', 'trailer'] } })).toContain('doc_video_pages')
     const pdf = ids({ filters: { content: { value: ['pdf'] } } })
-    expect(pdf).toContain('doc_report_kind')
+    expect(pdf).toContain('doc_by_type')
     for (const id of ['doc_video_pages', 'doc_image_pages', 'doc_audio_sites', 'gr_keywords']) {
       expect(pdf).not.toContain(id)
     }
+  })
+})
+
+describe('ruleBasedSelections: opt-in flavour templates (T-023)', () => {
+  const ids = (input: Partial<IntakeSpecInput>) =>
+    ruleBasedSelections(spec(input)).map((p) => p.templateId)
+
+  it('keeps academic and trusted-domain templates out unless the request signals them', () => {
+    const plain = ids({
+      goal: 'general_research',
+      scope: { domains: [] },
+      description: 'the film shiddat',
+      keywords: { all: ['shiddat', 'movie'] },
+    })
+    expect(plain).toContain('gr_keywords')
+    expect(plain).not.toContain('gr_academic')
+    expect(plain).not.toContain('gr_trusted_domains')
+
+    const research = ids({
+      goal: 'general_research',
+      scope: { domains: [] },
+      description: 'peer-reviewed research papers on solar',
+      keywords: { all: ['solar'] },
+    })
+    expect(research).toContain('gr_academic')
+  })
+
+  it('skips doc_by_type unless keywords or a target domain anchor it', () => {
+    expect(ids({ goal: 'documents', scope: { domains: [] }, description: 'files' })).not.toContain(
+      'doc_by_type',
+    )
+    expect(
+      ids({ goal: 'documents', scope: { domains: ['target.com'] }, description: 'files' }),
+    ).toContain('doc_by_type')
   })
 })
 

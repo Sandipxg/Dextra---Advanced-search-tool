@@ -25,6 +25,10 @@ _None_
 ## ✅ Done (recent)
 
 - [x] Simpler form (D-026): keywords required, description optional, 15 fields removed from the UI, report shows 7 rows + scroll with CSV/JSON/PDF downloads (2026-11-25)
+- [x] T-023 Accuracy plan steps 1–4 (D-029): keyword-relevance scoring + "loose match" flag, opt-in academic / trusted-domain / report templates, `doc_by_type` anchored, name fan-out fixed, intent words dropped (2026-11-25)
+- [ ] T-024 Accuracy plan steps 5–7: SerpAPI `nfpr`/`filter`/`lr`, paging past short pages, template audit against current operators (`inurl:` check, split long `site:` OR groups)
+- [ ] T-025 Measurement harness: stored raw SERP JSON, 30–50 query golden set, P@10 / nDCG@10 (before RRF, reranker, verification, LLM selector)
+- [ ] T-026 Template library v2 from `reports/Public dork template collections.md`: test then adopt the 29 draft templates; replace `inurl:` with a `required_path` scope mode (`site:{domain}/{path}`); split long `site:` OR groups; move `doc_sensitive_label` to security
 - [ ] T-021 Fallback when a query with a fixed `filetype:` or signal returns too few results (today only Soft filters widen, so such queries never fall back) (D-028)
 - [ ] T-022 Apply the content-fit check (D-028) to LLM picks as well as rule picks
 - [x] T-020 Media searches: web-page searches on video, image and audio sites plus a plain keyword search, content-fit check (D-028) (2026-11-25)
