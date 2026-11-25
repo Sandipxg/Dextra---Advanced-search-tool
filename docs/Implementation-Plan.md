@@ -59,6 +59,8 @@ Keeping all decision logic in `packages/core` (no network, no DB) is the main de
 
 ## Phase 2 — SERP provider spike (T-001, 1 day)
 
+> 🟡 Adapters + spike script done on `feat/t-001-serp-providers`. Live run waits for a SERP API key. Provider decision will be D-015.
+
 Goal: pick the default provider with evidence, not guesses.
 
 - Define `SerpProvider` interface: `search({ q, engine, type, gl, hl, location, tbs, num, page }) → { results: SerpResult[], costUnits }`.

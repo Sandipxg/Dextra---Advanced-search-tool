@@ -4,11 +4,10 @@ _Last updated: 2026-11-25_
 
 ## 🟡 In progress
 
-_None — design handed over from chat._
+- [ ] T-001 SERP provider spike — adapters for Serper, SerpAPI (Google + Bing) and Brave done in `@dextra/serp`; operator-matrix script ready. **Blocked on a SERP API key** for the live run (`pnpm --filter @dextra/serp spike --yes`).
 
 ## 🔜 Up next
 
-- [ ] T-001 Pick SERP API provider (compare Serper, SerpAPI, Brave; check `gl`, `hl`, `location`, `tbs`, `num` support and operator behaviour)
 - [ ] T-003 Write the intake spec Zod schema from [Intake Form Spec](./Intake-Form-Spec.md)
 - [ ] T-004b Seed script: parse YAML blocks in Template-Library.md into the `templates` table + Zod `TemplateSchema`
 - [ ] T-005 Template selector: LLM tool call with enum template IDs + Zod-validated output

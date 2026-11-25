@@ -17,11 +17,12 @@
 
 ## Packages
 
-| Package                                                | Status      | Contents                                                     |
-| ------------------------------------------------------ | ----------- | ------------------------------------------------------------ |
-| `packages/core`                                        | Started     | `GoalSchema` (A1 enum), `isSecurityGoal`                     |
-| `packages/env`                                         | Done        | `createServerEnv()` — typed server env, requires ≥1 SERP key |
-| `packages/serp`, `packages/db`, `apps/api`, `apps/web` | Not started | See [Implementation Plan](./Implementation-Plan.md)          |
+| Package                               | Status        | Contents                                                                                                                                                                                   |
+| ------------------------------------- | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `packages/core`                       | Started       | `GoalSchema` (A1 enum), `isSecurityGoal`                                                                                                                                                   |
+| `packages/env`                        | Done          | `createServerEnv()` — typed server env, requires ≥1 SERP key                                                                                                                               |
+| `packages/serp`                       | Adapters done | `SerpProvider` interface; Serper (Google web/news/scholar), SerpAPI (Google + Bing web), Brave (web/news); `createProviders`, `resolveProvider`; spike script `scripts/operator-matrix.ts` |
+| `packages/db`, `apps/api`, `apps/web` | Not started   | See [Implementation Plan](./Implementation-Plan.md)                                                                                                                                        |
 
 ## Pipeline
 
