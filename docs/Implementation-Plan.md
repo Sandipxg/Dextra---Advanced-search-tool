@@ -72,6 +72,8 @@ Goal: pick the default provider with evidence, not guesses.
 
 ## Phase 3 — Intake spec schema (T-003, 1–2 days)
 
+> ✅ Done 2026-11-25 on `feat/t-003-intake-schema` (D-018).
+
 In `packages/core/schema`:
 
 - Enums: `Goal` (9 values from A1), `UseCase` (A4), `Subdomains`, `Strictness` (`hard|soft|open`), `TimeRange` (`any|qdr:d|qdr:w|qdr:m|qdr:y|custom`), `ContentType` (D1), `Where` (D5), `Engine`, `ResultType`, `Platform` (E3), `Depth`, `PerQuery` (10/20/50/100), `OutputFormat`.

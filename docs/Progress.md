@@ -14,4 +14,5 @@
 - Operator-matrix spike script: 13 probes (+ `inbody:` variant) per engine on `nasa.gov`, dry run by default, `--yes` to spend credits; writes `packages/core/src/templates/operator-matrix.json` and `docs/Operator-Matrix.md`.
 - Ran the operator matrix with a SerpAPI key: 28 probe searches plus 1 follow-up (a re-run within the hour came from SerpAPI's cache). Google honours most operators but sometimes drops `site:`; `intext:`, `ext:` and `site:*.` don't work; `num` > 10 is ignored. Bing via SerpAPI ignored `site:`, `filetype:` and quotes.
 - Decided SerpAPI/Google for v1 with Bing off (D-015), code re-checks every result against scope (D-016), pages of 10 (D-017). Template library v1.1: all engines `[google]`; `intext:` templates now use quoted phrases; subdomain scope is `site:d -site:www.d`.
-- Next: intake spec Zod schema (T-003); T-001b when Serper/Brave keys exist.
+- T-003 (branch `feat/t-003-intake-schema`): `IntakeSpecSchema` in `@dextra/core` — every form field with defaults, domain/URL/tag validators, cross-field rules (security runs, overlaps, dates, location needs country, enabled engines), Hard scope coerced for security runs. ISO 3166/639 lists generated from ICU. 49 core tests (69 total) pass. Gaps settled in D-018.
+- Next: template schema + YAML seed (T-004b), then query compiler + guardrails (T-006).

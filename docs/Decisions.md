@@ -1,5 +1,19 @@
 # Decisions
 
+## D-018 — Intake spec schema details
+
+- **Date:** 2026-11-25
+- **Status:** Accepted
+- **Context:** T-003 turned the form spec into `IntakeSpecSchema`. A few gaps in the spec needed a call.
+- **Decision:**
+  - **Security run** = security goal (`attack_surface`, `exposed_pages`) or A4 = `bug_bounty` / `authorized_pentest`. Security goals also require A4 to be one of `bug_bounty`, `authorized_pentest`, `own_org_audit`. Security runs require B1 and F6 `confirmed: true`; the link is required for bug bounty / pentest and optional for own-org audits. Scope mode is coerced to `hard`.
+  - **D1 stores categories** (`pdf`, `word`, `spreadsheet`, `presentation`, `text`, `dataset`, `web`), not extensions; `CONTENT_TYPE_EXTENSIONS` maps them to `filetype:` values. The old example used `pptx`.
+  - **D5 drops "Page text"** because Google ignores `intext:` (T-001).
+  - **Country/language lists** are generated from ICU (`pnpm --filter @dextra/core gen:iso`) with historic/deprecated codes removed and counts asserted (249 / 183).
+  - Field names follow the spec JSON (snake_case). Filters carry `{ value, mode }`; `filetypes` became `content`; A5 raw text is `avoid`.
+  - Defaults use Zod `.prefault()` so a basic-mode payload parses into a complete spec.
+- **Consequences:** The form, API and LLM validation all import `IntakeSpecSchema` from `@dextra/core`. Intake-Form-Spec.md shows the real output shape.
+
 ## D-017 — Fetch results in pages of 10
 
 - **Date:** 2026-11-25
