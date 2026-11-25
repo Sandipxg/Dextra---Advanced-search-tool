@@ -1,4 +1,4 @@
-import type { Engine, ResultType, Strictness } from '../schema/enums'
+import type { Engine, Strictness } from '../schema/enums'
 import type { Goal } from '../schema/goal'
 import type { TemplateId } from '../templates/index'
 
@@ -32,7 +32,7 @@ export interface PlannedQuery {
   crossGoal: boolean
   q: string
   engine: Engine
-  type: ResultType
+  type: 'web' | 'news' | 'scholar'
   country?: string
   language?: string
   location?: string

@@ -167,26 +167,30 @@ describe('media searches (D-028)', () => {
   const ids = (input: Partial<IntakeSpecInput>) =>
     ruleBasedSelections(spec(input)).map((p) => p.templateId)
 
-  it('searches the Videos tab for a Video tick, with no PDF templates (reported case)', () => {
+  it('searches video sites and plain web pages for a Video tick (reported case)', () => {
     const s = spec({
       scope: { domains: [] },
       keywords: { all: ['shiddat', 'movie'] },
       filters: { content: { value: ['video'] } },
     })
     const picks = ruleBasedSelections(s)
-    expect(picks.map((p) => p.templateId)).toEqual(['doc_video_results'])
+    expect(picks.map((p) => p.templateId)).toEqual(['doc_video_pages', 'gr_keywords'])
     const plan = buildPlan(s, picks)
-    expect(plan.queries.map((q) => [q.type, q.q])).toEqual([['videos', 'shiddat movie']])
+    expect(plan.queries.every((q) => q.type === 'web')).toBe(true)
+    expect(plan.queries.map((q) => q.q)).toEqual([
+      '(site:youtube.com OR site:vimeo.com OR site:dailymotion.com OR site:facebook.com OR site:hotstar.com OR site:netflix.com OR site:primevideo.com OR site:archive.org) shiddat movie',
+      'shiddat movie',
+    ])
   })
 
-  it('uses the Images tab and audio sites for their ticks', () => {
+  it('uses image and audio sites for their ticks, each with a plain web search', () => {
     expect(
       ids({ filters: { content: { value: ['image'] } }, keywords: { all: ['logo'] } }),
-    ).toEqual(['doc_image_results'])
+    ).toEqual(['doc_image_pages', 'gr_keywords'])
     const audio = ruleBasedSelections(
       spec({ filters: { content: { value: ['audio'] } }, keywords: { all: ['shiddat'] } }),
     )
-    expect(audio.map((p) => p.templateId)).toEqual(['doc_audio_sites'])
+    expect(audio.map((p) => p.templateId)).toEqual(['doc_audio_sites', 'gr_keywords'])
     expect(audio[0]?.params.platform).toContain('open.spotify.com')
   })
 
@@ -197,19 +201,19 @@ describe('media searches (D-028)', () => {
       keywords: { all: ['shiddat', 'movie'] },
       filters: { content: { value: ['video'] } },
     })
-    const picks = ruleBasedSelections(s)
-    expect(picks.map((p) => p.templateId)).toContain('doc_video_results')
-    expect(picks.map((p) => p.templateId)).not.toContain('gr_keywords_filetype')
-    const plan = buildPlan(s, picks)
+    const picked = ruleBasedSelections(s).map((p) => p.templateId)
+    expect(picked).toContain('doc_video_pages')
+    expect(picked.filter((id) => id === 'gr_keywords')).toHaveLength(1)
+    expect(picked).not.toContain('gr_keywords_filetype')
+    const plan = buildPlan(s, ruleBasedSelections(s))
     expect(plan.queries.some((q) => /filetype:/.test(q.q))).toBe(false)
-    expect(plan.queries.find((q) => q.templateId === 'doc_video_results')?.type).toBe('videos')
   })
 
   it('opts in from media words and stays out of plain document searches', () => {
-    expect(ids({ keywords: { all: ['shiddat', 'trailer'] } })).toContain('doc_video_results')
+    expect(ids({ keywords: { all: ['shiddat', 'trailer'] } })).toContain('doc_video_pages')
     const pdf = ids({ filters: { content: { value: ['pdf'] } } })
     expect(pdf).toContain('doc_report_kind')
-    for (const id of ['doc_video_results', 'doc_image_results', 'doc_audio_sites'] as const) {
+    for (const id of ['doc_video_pages', 'doc_image_pages', 'doc_audio_sites', 'gr_keywords']) {
       expect(pdf).not.toContain(id)
     }
   })

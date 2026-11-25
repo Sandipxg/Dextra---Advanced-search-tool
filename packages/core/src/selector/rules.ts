@@ -89,17 +89,18 @@ export const OPT_IN_WORDS: Partial<Record<TemplateId, readonly string[]>> = {
 const OPT_IN_BY_CONTENT: ReadonlySet<TemplateId> = new Set<TemplateId>(['doc_data_files'])
 
 /**
- * Media templates (D-028): run for any goal when their content type is ticked or the
- * request mentions one of the words.
+ * Media templates (D-028): web-page searches on video, image and audio sites. They run for
+ * any goal when their content type is ticked or the request mentions one of the words, and
+ * bring a plain keyword web search along, since the best match is often an ordinary page.
  */
 export const MEDIA_TEMPLATES: Partial<
   Record<TemplateId, { content: ContentType; words: readonly string[] }>
 > = {
-  doc_video_results: {
+  doc_video_pages: {
     content: 'video',
     words: ['video', 'movie', 'film', 'trailer', 'episode', 'clip', 'documentary', 'webinar'],
   },
-  doc_image_results: {
+  doc_image_pages: {
     content: 'image',
     words: [
       'image',
@@ -117,6 +118,9 @@ export const MEDIA_TEMPLATES: Partial<
     words: ['audio', 'song', 'music', 'podcast', 'album', 'soundtrack', 'audiobook'],
   },
 }
+
+/** Plain keyword web search that accompanies media searches (D-028). */
+const PLAIN_WEB_TEMPLATE: TemplateId = 'gr_keywords'
 
 /** `filetype:` values written into a template's query (not from an `{ext}` param). */
 const fixedFiletypes = (t: Template): string[] =>
@@ -199,7 +203,7 @@ const canSupply = (t: Template, spec: IntakeSpec): boolean => {
 /**
  * Deterministic selector: used when the LLM is unavailable, refuses, or returns nothing
  * usable, and in tests/CI. Goal templates by priority (opt-in ones only when the request
- * mentions them), media templates for ticked media types (any goal), plus platform
+ * mentions them), media templates and a plain web search for ticked media types (any goal), plus platform
  * templates for E3. Templates that can't produce the ticked content types are skipped. Param values the request mentions win
  * over the defaults.
  */
@@ -246,7 +250,13 @@ export const ruleBasedSelections = (spec: IntakeSpec): Selection[] => {
       )
     : []
 
-  const unique = [...new Map([...goal, ...media, ...platform].map((t) => [t.id, t])).values()]
+  const wantsMedia = [...goal, ...media].some((t) => MEDIA_TEMPLATES[t.id as TemplateId])
+  const plainWeb = wantsMedia
+    ? approvedTemplates().filter((t) => t.id === PLAIN_WEB_TEMPLATE && allowed(t))
+    : []
+  const unique = [
+    ...new Map([...goal, ...media, ...plainWeb, ...platform].map((t) => [t.id, t])).values(),
+  ]
   return unique.flatMap((t) => {
     const picked = pickParams(t, spec, sites, text)
     if (!picked) return []

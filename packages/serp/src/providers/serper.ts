@@ -1,14 +1,8 @@
 import { z } from 'zod'
 import { compact, requestJson, toGoogleTbs } from '../http'
-import type { FetchLike, ResultType, SearchRequest, SearchResponse, SerpProvider } from '../types'
+import type { FetchLike, SearchRequest, SearchResponse, SerpProvider } from '../types'
 
-const ENDPOINT = {
-  web: 'search',
-  news: 'news',
-  scholar: 'scholar',
-  videos: 'videos',
-  images: 'images',
-} as const satisfies Record<ResultType, string>
+const ENDPOINT = { web: 'search', news: 'news', scholar: 'scholar' } as const
 
 const Item = z.object({
   link: z.string(),
@@ -21,8 +15,6 @@ const Item = z.object({
 const Response = z.object({
   organic: z.array(Item).optional(),
   news: z.array(Item).optional(),
-  videos: z.array(Item).optional(),
-  images: z.array(Item).optional(),
 })
 
 /** Builds the HTTP request. Pure, so it is unit-tested without network. */
@@ -46,7 +38,7 @@ export const buildSerperRequest = (req: SearchRequest, apiKey: string) => ({
 })
 
 export const parseSerperResponse = (data: z.infer<typeof Response>) =>
-  (data.news ?? data.videos ?? data.images ?? data.organic ?? []).map((r, i) => ({
+  (data.news ?? data.organic ?? []).map((r, i) => ({
     url: r.link,
     title: r.title,
     snippet: r.snippet,
@@ -55,7 +47,7 @@ export const parseSerperResponse = (data: z.infer<typeof Response>) =>
     ...(r.source ? { source: r.source } : {}),
   }))
 
-/** Serper.dev — Google results only (web, news, scholar, videos, images). */
+/** Serper.dev — Google results only (web, news, scholar). */
 export const createSerperProvider = (apiKey: string, fetchFn: FetchLike = fetch): SerpProvider => ({
   id: 'serper',
   supports: (engine) => engine === 'google',
